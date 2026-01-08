@@ -179,8 +179,8 @@ class SolanaWeb3Service {
       // Sign with mint keypair
       transaction.partialSign(mintKeypair);
 
-      // Send transaction via wallet
-      const signature = await this.wallet.signAndSendTransaction(transaction);
+      // Send transaction via wallet adapter
+      const signature = await this.wallet.sendTransaction(transaction, this.connection);
 
       // Confirm transaction
       await this.connection.confirmTransaction(signature, 'confirmed');
@@ -240,20 +240,20 @@ class SolanaWeb3Service {
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = this.publicKey;
 
-      const signature = await this.wallet.signAndSendTransaction(transaction);
+      const signature = await this.wallet.sendTransaction(transaction, this.connection);
       await this.connection.confirmTransaction(signature, 'confirmed');
 
       return {
         txHash: signature
       };
-    } catch (error) {
+      } catch (error) {
       console.error('Error minting tokens:', error);
       throw error;
-    }
-  }
+      }
+      }
 
-  // Burn tokens
-  async burnTokens(tokenAddress, amount, decimals) {
+      // Burn tokens
+      async burnTokens(tokenAddress, amount, decimals) {
     if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
     if (!this.connection) throw new Error('Connection not initialized');
 
@@ -285,19 +285,19 @@ class SolanaWeb3Service {
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = this.publicKey;
 
-      const signature = await this.wallet.signAndSendTransaction(transaction);
+      const signature = await this.wallet.sendTransaction(transaction, this.connection);
       await this.connection.confirmTransaction(signature, 'confirmed');
 
       return {
         txHash: signature
       };
-    } catch (error) {
+      } catch (error) {
       console.error('Error burning tokens:', error);
       throw error;
-    }
-  }
+      }
+      }
 
-  // Get token info
+      // Get token info
   async getTokenInfo(tokenAddress) {
     if (!this.connection) throw new Error('Connection not initialized');
 
@@ -341,19 +341,19 @@ class SolanaWeb3Service {
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = this.publicKey;
 
-      const signature = await this.wallet.signAndSendTransaction(transaction);
+      const signature = await this.wallet.sendTransaction(transaction, this.connection);
       await this.connection.confirmTransaction(signature, 'confirmed');
 
       return {
         txHash: signature
       };
-    } catch (error) {
+      } catch (error) {
       console.error('Error adding liquidity:', error);
       throw error;
-    }
-  }
+      }
+      }
 
-  // Swap tokens (simplified)
+      // Swap tokens (simplified)
   async swapTokens(network, fromToken, toToken, amountIn, decimals) {
     if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
     if (!this.connection) this.initConnection(network);
@@ -367,19 +367,19 @@ class SolanaWeb3Service {
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = this.publicKey;
 
-      const signature = await this.wallet.signAndSendTransaction(transaction);
+      const signature = await this.wallet.sendTransaction(transaction, this.connection);
       await this.connection.confirmTransaction(signature, 'confirmed');
 
       return {
         txHash: signature
       };
-    } catch (error) {
+      } catch (error) {
       console.error('Error swapping tokens:', error);
       throw error;
-    }
-  }
+      }
+      }
 
-  // Create Presale (simplified)
+      // Create Presale (simplified)
   async createPresale(network, presaleData, fee) {
     if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
     if (!this.connection) this.initConnection(network);
@@ -402,20 +402,20 @@ class SolanaWeb3Service {
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = this.publicKey;
 
-      const signature = await this.wallet.signAndSendTransaction(transaction);
+      const signature = await this.wallet.sendTransaction(transaction, this.connection);
       await this.connection.confirmTransaction(signature, 'confirmed');
 
       return {
         txHash: signature,
         presaleAddress: 'PRESALE_ACCOUNT_ADDRESS' // Would be generated from program
       };
-    } catch (error) {
+      } catch (error) {
       console.error('Error creating presale:', error);
       throw error;
-    }
-  }
+      }
+      }
 
-  // Invest in Presale
+      // Invest in Presale
   async investInPresale(presaleAddress, amount) {
     if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
     if (!this.connection) throw new Error('Connection not initialized');
@@ -435,17 +435,17 @@ class SolanaWeb3Service {
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = this.publicKey;
 
-      const signature = await this.wallet.signAndSendTransaction(transaction);
+      const signature = await this.wallet.sendTransaction(transaction, this.connection);
       await this.connection.confirmTransaction(signature, 'confirmed');
 
       return {
         txHash: signature
       };
-    } catch (error) {
+      } catch (error) {
       console.error('Error investing in presale:', error);
       throw error;
-    }
-  }
-}
+      }
+      }
+      }
 
 export const web3Service = new SolanaWeb3Service();
