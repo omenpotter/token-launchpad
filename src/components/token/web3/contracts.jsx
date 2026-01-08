@@ -1,3 +1,4 @@
+
 import { PublicKey, clusterApiUrl } from '@solana/web3.js';
 
 // X1 Network Configuration (SVM)
@@ -30,15 +31,15 @@ export const NETWORK_CONFIG = {
 export const PROGRAM_ADDRESSES = {
   x1Testnet: {
     TokenProgram: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-    TokenFactory: 'FACTORY_PROGRAM_ADDRESS_TESTNET', // Replace with actual program address
-    DEXProgram: 'DEX_PROGRAM_ADDRESS_TESTNET', // Replace with actual program address
-    PresaleProgram: 'PRESALE_PROGRAM_ADDRESS_TESTNET' // Replace with actual program address
+    TokenFactory: '11111111111111111111111111111111',
+    DEXProgram: '11111111111111111111111111111111',
+    PresaleProgram: '11111111111111111111111111111111'
   },
   x1Mainnet: {
     TokenProgram: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-    TokenFactory: 'FACTORY_PROGRAM_ADDRESS_MAINNET',
-    DEXProgram: 'DEX_PROGRAM_ADDRESS_MAINNET',
-    PresaleProgram: 'PRESALE_PROGRAM_ADDRESS_MAINNET'
+    TokenFactory: '11111111111111111111111111111111',
+    DEXProgram: '11111111111111111111111111111111',
+    PresaleProgram: '11111111111111111111111111111111'
   }
 };
 
