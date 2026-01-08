@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Zap, Flame, TrendingUp, Coins, Layers } from 'lucide-react';
+import { Zap, Flame, TrendingUp, Coins, Layers, Plus } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { useWallet } from '../components/token/WalletContext';
@@ -124,6 +126,20 @@ export default function MintingPage() {
       <SharedHeader />
 
       <main className="max-w-6xl mx-auto px-4 py-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">X1Space Launcher</h1>
+            <p className="text-slate-400">Mint, burn, and manage tokens on X1 Mainnet</p>
+          </div>
+          <Link
+            to={createPageUrl('CreateToken')}
+            className="inline-flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-xl transition font-medium"
+          >
+            <Plus className="w-5 h-5" />
+            Create Token
+          </Link>
+        </div>
+        
         <MintingTab
           createdTokens={createdTokens}
           selectedTokenForMint={selectedTokenForMint}

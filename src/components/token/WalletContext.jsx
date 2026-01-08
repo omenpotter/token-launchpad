@@ -7,7 +7,7 @@ const WalletContext = createContext(null);
 export function WalletProvider({ children }) {
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
-  const [network, setNetwork] = useState('x1Testnet');
+  const [network, setNetwork] = useState('x1Mainnet');
   const initialized = useRef(false);
 
   // Check if wallet is already connected on mount

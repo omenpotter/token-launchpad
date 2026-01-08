@@ -2,6 +2,9 @@ import React from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { useWallet } from '../components/token/WalletContext';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { ArrowLeft } from 'lucide-react';
 import SharedHeader from '../components/token/SharedHeader';
 import SharedFooter from '../components/token/SharedFooter';
 import DashboardTab from '../components/token/DashboardTab';
@@ -21,12 +24,20 @@ export default function DashboardPage() {
       <SharedHeader />
 
       <main className="max-w-6xl mx-auto px-4 py-6">
+        <Link
+          to={createPageUrl('Minting')}
+          className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition mb-6"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Minting</span>
+        </Link>
+        
         <DashboardTab
           createdTokens={createdTokens}
           setCreatedTokens={async () => {
             await refetchTokens();
           }}
-          network="x1Testnet"
+          network="x1Mainnet"
           onQuickAction={(action, tokenId) => {
             // Navigation handled by DashboardTab
           }}

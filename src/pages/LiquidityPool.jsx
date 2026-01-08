@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Droplets, Lock, AlertCircle, Plus, ExternalLink, DollarSign, TrendingUp, Wallet as WalletIcon, ArrowUpDown } from 'lucide-react';
+import { Droplets, Lock, AlertCircle, Plus, ExternalLink, DollarSign, TrendingUp, Wallet as WalletIcon, ArrowUpDown, ArrowLeft } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { useWallet } from '../components/token/WalletContext';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import SharedHeader from '../components/token/SharedHeader';
 import SharedFooter from '../components/token/SharedFooter';
 import { web3Service } from '../components/token/web3/Web3Provider';
@@ -105,6 +107,14 @@ export default function LiquidityPoolPage() {
       <SharedHeader />
 
       <main className="max-w-6xl mx-auto px-4 py-6">
+        <Link
+          to={createPageUrl('Minting')}
+          className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition mb-6"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Minting</span>
+        </Link>
+        
         {/* Stats Grid */}
         <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">

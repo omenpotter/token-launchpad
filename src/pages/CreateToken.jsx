@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { useWallet } from '../components/token/WalletContext';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { ArrowLeft } from 'lucide-react';
 import SharedHeader from '../components/token/SharedHeader';
 import SharedFooter from '../components/token/SharedFooter';
 import WalletApprovalModal from '../components/token/WalletApprovalModal';
@@ -10,7 +13,7 @@ import { web3Service } from '../components/token/web3/Web3Provider';
 
 export default function CreateTokenPage() {
   const { walletConnected, walletAddress } = useWallet();
-  const [network, setNetwork] = useState('x1Testnet');
+  const [network, setNetwork] = useState('x1Mainnet');
   const [tokenType, setTokenType] = useState('SPL');
   const [tokenName, setTokenName] = useState('');
   const [tokenSymbol, setTokenSymbol] = useState('');
@@ -136,6 +139,14 @@ export default function CreateTokenPage() {
       <SharedHeader />
 
       <main className="max-w-6xl mx-auto px-4 py-6">
+        <Link
+          to={createPageUrl('Minting')}
+          className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition mb-6"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Minting</span>
+        </Link>
+        
         <CreateTokenTab
           network={network}
           setNetwork={setNetwork}
