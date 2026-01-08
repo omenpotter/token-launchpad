@@ -150,7 +150,7 @@ export default function MintingTab({
                     Send
                   </button>
                   <a
-                    href={`https://explorer.mainnet.x1.xyz/address/${token.mint}`}
+                    href={`https://explorer.x1.xyz/address/${token.mint}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-4 py-2 bg-slate-600/30 hover:bg-slate-600/50 text-slate-300 rounded-lg transition flex items-center gap-2"

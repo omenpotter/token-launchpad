@@ -61,7 +61,7 @@ export default function LaunchpadPage() {
         const { presaleData } = approvalData;
         const token = presaleData.token;
 
-        const result = await web3Service.createPresale('x1Testnet', {
+        const result = await web3Service.createPresale('x1Mainnet', {
           tokenAddress: token.mint,
           softCap: presaleData.softCap,
           hardCap: presaleData.hardCap,

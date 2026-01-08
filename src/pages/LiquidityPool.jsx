@@ -55,7 +55,7 @@ export default function LiquidityPoolPage() {
     setIsLoading(true);
     try {
       const result = await web3Service.addLiquidity(
-        'x1Testnet',
+        'x1Mainnet',
         selectedTokenData.mint,
         parseFloat(tokenAmount),
         parseFloat(liquidityAmount),
