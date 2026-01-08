@@ -1,6 +1,8 @@
 import '../components/token/web3/polyfills';
 import React, { useState, useEffect } from 'react';
-import { Wallet, Coins, Zap, LayoutDashboard, Rocket, LogOut, TrendingUp, Droplets, Send, MessageCircle, Twitter } from 'lucide-react';
+import { Wallet, Coins, Zap, LayoutDashboard, Rocket, LogOut, TrendingUp, Droplets, Send } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
@@ -436,12 +438,12 @@ export default function X1TokenLauncher() {
   };
 
   const tabs = [
-    { id: 'create', label: 'Create Token', icon: Coins },
-    { id: 'minting', label: 'Minting', icon: Zap },
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'launchpad', label: 'Launchpad', icon: Rocket },
-    { id: 'liquidity', label: 'Liquidity Pool', icon: Droplets },
-    { id: 'trade', label: 'Trade', icon: TrendingUp }
+    { id: 'create', label: 'Create Token', icon: Coins, path: 'CreateToken' },
+    { id: 'minting', label: 'Minting', icon: Zap, path: 'Minting' },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: 'Dashboard' },
+    { id: 'launchpad', label: 'Launchpad', icon: Rocket, path: 'Launchpad' },
+    { id: 'liquidity', label: 'Liquidity Pool', icon: Droplets, path: 'LiquidityPool' },
+    { id: 'trade', label: 'Trade', icon: TrendingUp, path: 'Trade' }
   ];
 
   return (
@@ -496,11 +498,11 @@ export default function X1TokenLauncher() {
             <a href="https://xdex.xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition">
               xDEX
             </a>
-            <a href="https://t.me/xdex_xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition" title="Telegram">
-              <MessageCircle className="w-5 h-5" />
+            <a href="https://t.me/xdex_xyz" target="_blank" rel="noopener noreferrer" title="Telegram">
+              <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/3166166d8_Telegram_2019_Logosvg1.jpg" alt="Telegram" className="w-5 h-5 rounded-full hover:opacity-80 transition" />
             </a>
-            <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition" title="Twitter">
-              <Twitter className="w-5 h-5" />
+            <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" title="X">
+              <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/2e2eecb01_31AGs2bX7mL.png" alt="X" className="w-5 h-5 hover:opacity-80 transition" />
             </a>
           </div>
         </div>
@@ -509,18 +511,14 @@ export default function X1TokenLauncher() {
         {/* Tabs */}
         <div className="flex overflow-x-auto gap-2 mb-6 pb-2 scrollbar-hide">
           {tabs.map(tab => (
-            <button
+            <Link
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium whitespace-nowrap transition ${
-                activeTab === tab.id
-                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                  : 'bg-slate-800/50 text-slate-400 hover:bg-slate-800 hover:text-slate-300 border border-transparent'
-              }`}
+              to={createPageUrl(tab.path)}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl font-medium whitespace-nowrap transition bg-slate-800/50 text-slate-400 hover:bg-slate-800 hover:text-slate-300 border border-transparent"
             >
               <tab.icon className="w-4 h-4" />
               {tab.label}
-            </button>
+            </Link>
           ))}
         </div>
 
@@ -725,11 +723,11 @@ export default function X1TokenLauncher() {
               <a href="https://xdex.xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition text-sm">
                 xDEX.xyz
               </a>
-              <a href="https://t.me/xdex_xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition">
-                <MessageCircle className="w-5 h-5" />
+              <a href="https://t.me/xdex_xyz" target="_blank" rel="noopener noreferrer" title="Telegram">
+                <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/3166166d8_Telegram_2019_Logosvg1.jpg" alt="Telegram" className="w-5 h-5 rounded-full hover:opacity-80 transition" />
               </a>
-              <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition">
-                <Twitter className="w-5 h-5" />
+              <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" title="X">
+                <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/2e2eecb01_31AGs2bX7mL.png" alt="X" className="w-5 h-5 hover:opacity-80 transition" />
               </a>
             </div>
           </div>
