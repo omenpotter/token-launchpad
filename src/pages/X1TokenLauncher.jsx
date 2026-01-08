@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, Coins, Zap, LayoutDashboard, Rocket, LogOut, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PhantomWalletAdapter } from '@solana/wallet-adapter-wallets';
+import { BackpackWalletAdapter } from '@solana/wallet-adapter-wallets';
 
 import WalletConnectModal from '../components/token/WalletConnectModal';
 import WalletApprovalModal from '../components/token/WalletApprovalModal';
@@ -70,38 +72,19 @@ export default function X1TokenLauncher() {
     return network.includes('x1') ? 'XNT' : 'SOL';
   };
 
-  // Initialize Web3 wallet connection
+  // Initialize Solana connection
   useEffect(() => {
-    const checkWallet = async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-          if (accounts.length > 0) {
-            const result = await web3Service.connectWallet();
-            setWalletAddress(result.address);
-            setWalletConnected(true);
-          }
-        } catch (error) {
-          console.error('Error checking wallet:', error);
-        }
-      }
-    };
-    checkWallet();
-  }, []);
+    web3Service.initConnection(network);
+  }, [network]);
 
   const connectBackpack = async () => {
     try {
-      // Check for Backpack Ethereum provider
-      if (window.backpack && window.backpack.ethereum) {
-        const result = await web3Service.connectWallet(window.backpack.ethereum);
-        await web3Service.switchNetwork(network, window.backpack.ethereum);
-        
-        setWalletAddress(result.address);
-        setWalletConnected(true);
-        setShowWalletModal(false);
-      } else {
-        alert('Backpack wallet not found. Please install Backpack from https://backpack.app');
-      }
+      const backpackAdapter = new BackpackWalletAdapter();
+      const result = await web3Service.connectWallet(backpackAdapter);
+      
+      setWalletAddress(result.address);
+      setWalletConnected(true);
+      setShowWalletModal(false);
     } catch (error) {
       console.error('Backpack connection error:', error);
       alert('Failed to connect Backpack: ' + error.message);
@@ -110,27 +93,20 @@ export default function X1TokenLauncher() {
 
   const connectPhantom = async () => {
     try {
-      // Check for Phantom Ethereum provider
-      if (window.phantom && window.phantom.ethereum) {
-        const result = await web3Service.connectWallet(window.phantom.ethereum);
-        await web3Service.switchNetwork(network, window.phantom.ethereum);
-        
-        setWalletAddress(result.address);
-        setWalletConnected(true);
-        setShowWalletModal(false);
-      } else if (window.solana && window.solana.isPhantom) {
-        alert('Phantom detected but X1 requires Ethereum support. Please enable Ethereum network in Phantom.');
-      } else {
-        alert('Phantom wallet not found. Please install Phantom from https://phantom.app');
-      }
+      const phantomAdapter = new PhantomWalletAdapter();
+      const result = await web3Service.connectWallet(phantomAdapter);
+      
+      setWalletAddress(result.address);
+      setWalletConnected(true);
+      setShowWalletModal(false);
     } catch (error) {
       console.error('Phantom connection error:', error);
       alert('Failed to connect Phantom: ' + error.message);
     }
   };
 
-  const disconnectWallet = () => {
-    web3Service.disconnect();
+  const disconnectWallet = async () => {
+    await web3Service.disconnect();
     setWalletConnected(false);
     setWalletAddress('');
   };

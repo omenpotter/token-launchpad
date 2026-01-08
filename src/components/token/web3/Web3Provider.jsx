@@ -1,48 +1,66 @@
-import { ethers } from 'ethers';
-import { NETWORK_CONFIG, CONTRACT_ADDRESSES, TOKEN_FACTORY_ABI, ERC20_ABI, DEX_ROUTER_ABI, PRESALE_FACTORY_ABI, PRESALE_ABI } from './contracts';
+import { 
+  Connection, 
+  PublicKey, 
+  Transaction, 
+  SystemProgram,
+  LAMPORTS_PER_SOL,
+  clusterApiUrl
+} from '@solana/web3.js';
+import {
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  createInitializeMintInstruction,
+  createAssociatedTokenAccountInstruction,
+  createMintToInstruction,
+  createBurnInstruction,
+  getAssociatedTokenAddress,
+  getMint,
+  getAccount,
+  createInitializeMetadataPointerInstruction,
+  createInitializeMintCloseAuthorityInstruction,
+  TYPE_SIZE,
+  LENGTH_SIZE,
+  ExtensionType,
+  getMintLen
+} from '@solana/spl-token';
+import { NETWORK_CONFIG, PROGRAM_ADDRESSES, TOKEN_CREATION_FEE, PRESALE_CREATION_FEE, DIRECT_MINT_FEE } from './contracts';
 
-class Web3Service {
+class SolanaWeb3Service {
   constructor() {
-    this.provider = null;
-    this.signer = null;
-    this.account = null;
-    this.chainId = null;
+    this.connection = null;
+    this.wallet = null;
+    this.publicKey = null;
+    this.network = 'x1Testnet';
   }
 
-  // Connect wallet
-  async connectWallet(customProvider = null) {
-    const ethereumProvider = customProvider || window.ethereum;
-    
-    if (typeof ethereumProvider === 'undefined') {
-      throw new Error('Please install MetaMask or another Web3 wallet');
-    }
+  // Initialize connection
+  initConnection(network) {
+    this.network = network;
+    const config = NETWORK_CONFIG[network];
+    this.connection = new Connection(config.rpcUrl, 'confirmed');
+    return this.connection;
+  }
 
+  // Connect wallet (for Phantom, Backpack, etc.)
+  async connectWallet(walletAdapter) {
     try {
-      await ethereumProvider.request({ method: 'eth_requestAccounts' });
-      this.provider = new ethers.BrowserProvider(ethereumProvider);
-      this.signer = await this.provider.getSigner();
-      this.account = await this.signer.getAddress();
-      
-      const network = await this.provider.getNetwork();
-      this.chainId = network.chainId.toString();
+      if (!walletAdapter) {
+        throw new Error('No wallet adapter provided');
+      }
 
-      // Listen for account changes
-      ethereumProvider.on('accountsChanged', (accounts) => {
-        if (accounts.length === 0) {
-          this.disconnect();
-        } else {
-          this.account = accounts[0];
-        }
-      });
+      // Store wallet adapter
+      this.wallet = walletAdapter;
 
-      // Listen for chain changes
-      ethereumProvider.on('chainChanged', () => {
-        window.location.reload();
-      });
+      // Connect if not already connected
+      if (!walletAdapter.connected) {
+        await walletAdapter.connect();
+      }
+
+      this.publicKey = walletAdapter.publicKey;
 
       return {
-        address: this.account,
-        chainId: this.chainId
+        address: this.publicKey.toString(),
+        connected: true
       };
     } catch (error) {
       console.error('Error connecting wallet:', error);
@@ -51,291 +69,352 @@ class Web3Service {
   }
 
   // Disconnect wallet
-  disconnect() {
-    this.provider = null;
-    this.signer = null;
-    this.account = null;
-    this.chainId = null;
+  async disconnect() {
+    if (this.wallet) {
+      await this.wallet.disconnect();
+    }
+    this.wallet = null;
+    this.publicKey = null;
   }
 
-  // Switch network
-  async switchNetwork(network, customProvider = null) {
-    const ethereumProvider = customProvider || window.ethereum;
-    const config = NETWORK_CONFIG[network];
-    if (!config) throw new Error('Invalid network');
+  // Get SOL balance
+  async getBalance(address) {
+    if (!this.connection) throw new Error('Connection not initialized');
+    const publicKey = new PublicKey(address || this.publicKey);
+    const balance = await this.connection.getBalance(publicKey);
+    return balance / LAMPORTS_PER_SOL;
+  }
+
+  // Create SPL Token
+  async createToken(network, tokenData, fee) {
+    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
+    if (!this.connection) this.initConnection(network);
 
     try {
-      await ethereumProvider.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: config.chainId }]
-      });
-    } catch (switchError) {
-      // Network doesn't exist, add it
-      if (switchError.code === 4902) {
-        await ethereumProvider.request({
-          method: 'wallet_addEthereumChain',
-          params: [config]
-        });
-      } else {
-        throw switchError;
+      // Generate new keypair for mint
+      const mintKeypair = await this.wallet.generateKeypair();
+      const mint = mintKeypair.publicKey;
+
+      // Get associated token account
+      const associatedToken = await getAssociatedTokenAddress(
+        mint,
+        this.publicKey,
+        false,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+
+      // Calculate rent
+      const mintLen = getMintLen([]);
+      const lamports = await this.connection.getMinimumBalanceForRentExemption(mintLen);
+
+      // Create transaction
+      const transaction = new Transaction();
+
+      // Add fee payment
+      if (fee > 0) {
+        transaction.add(
+          SystemProgram.transfer({
+            fromPubkey: this.publicKey,
+            toPubkey: new PublicKey(PROGRAM_ADDRESSES[network].TokenFactory),
+            lamports: fee * LAMPORTS_PER_SOL
+          })
+        );
       }
+
+      // Create mint account
+      transaction.add(
+        SystemProgram.createAccount({
+          fromPubkey: this.publicKey,
+          newAccountPubkey: mint,
+          space: mintLen,
+          lamports,
+          programId: TOKEN_PROGRAM_ID
+        })
+      );
+
+      // Initialize mint
+      transaction.add(
+        createInitializeMintInstruction(
+          mint,
+          tokenData.decimals,
+          this.publicKey, // mint authority
+          tokenData.lockMint ? null : this.publicKey, // freeze authority
+          TOKEN_PROGRAM_ID
+        )
+      );
+
+      // Create associated token account
+      transaction.add(
+        createAssociatedTokenAccountInstruction(
+          this.publicKey,
+          associatedToken,
+          this.publicKey,
+          mint,
+          TOKEN_PROGRAM_ID,
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        )
+      );
+
+      // Mint initial supply
+      if (tokenData.supply > 0) {
+        transaction.add(
+          createMintToInstruction(
+            mint,
+            associatedToken,
+            this.publicKey,
+            tokenData.supply * Math.pow(10, tokenData.decimals),
+            [],
+            TOKEN_PROGRAM_ID
+          )
+        );
+      }
+
+      // Send transaction
+      const signature = await this.wallet.sendTransaction(transaction, this.connection, {
+        signers: [mintKeypair]
+      });
+
+      // Confirm transaction
+      await this.connection.confirmTransaction(signature, 'confirmed');
+
+      return {
+        txHash: signature,
+        tokenAddress: mint.toString(),
+        associatedTokenAccount: associatedToken.toString()
+      };
+    } catch (error) {
+      console.error('Error creating token:', error);
+      throw error;
     }
-  }
-
-  // Get native balance
-  async getBalance(address) {
-    if (!this.provider) throw new Error('Provider not initialized');
-    const balance = await this.provider.getBalance(address || this.account);
-    return ethers.formatEther(balance);
-  }
-
-  // Create Token
-  async createToken(network, tokenData, fee) {
-    if (!this.signer) throw new Error('Wallet not connected');
-    
-    const contractAddress = CONTRACT_ADDRESSES[network].TokenFactory;
-    const contract = new ethers.Contract(contractAddress, TOKEN_FACTORY_ABI, this.signer);
-
-    const tx = await contract.createToken(
-      tokenData.name,
-      tokenData.symbol,
-      tokenData.decimals,
-      ethers.parseUnits(tokenData.supply.toString(), tokenData.decimals),
-      tokenData.lockMint,
-      tokenData.immutable,
-      tokenData.maxPerWallet || 0,
-      { value: ethers.parseEther(fee.toString()) }
-    );
-
-    const receipt = await tx.wait();
-    
-    // Extract token address from event logs
-    const tokenAddress = receipt.logs[0].address;
-    
-    return {
-      txHash: receipt.hash,
-      tokenAddress,
-      blockNumber: receipt.blockNumber
-    };
   }
 
   // Mint tokens
   async mintTokens(tokenAddress, amount, decimals, fee) {
-    if (!this.signer) throw new Error('Wallet not connected');
-    
-    const contract = new ethers.Contract(tokenAddress, ERC20_ABI, this.signer);
-    const parsedAmount = ethers.parseUnits(amount.toString(), decimals);
+    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
+    if (!this.connection) throw new Error('Connection not initialized');
 
-    const tx = await contract.mint(this.account, parsedAmount, {
-      value: ethers.parseEther(fee.toString())
-    });
+    try {
+      const mint = new PublicKey(tokenAddress);
+      const associatedToken = await getAssociatedTokenAddress(
+        mint,
+        this.publicKey,
+        false,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
 
-    const receipt = await tx.wait();
-    return {
-      txHash: receipt.hash,
-      blockNumber: receipt.blockNumber
-    };
+      const transaction = new Transaction();
+
+      // Add fee payment
+      if (fee > 0) {
+        transaction.add(
+          SystemProgram.transfer({
+            fromPubkey: this.publicKey,
+            toPubkey: new PublicKey(PROGRAM_ADDRESSES[this.network].TokenFactory),
+            lamports: fee * LAMPORTS_PER_SOL
+          })
+        );
+      }
+
+      // Mint tokens
+      transaction.add(
+        createMintToInstruction(
+          mint,
+          associatedToken,
+          this.publicKey,
+          amount * Math.pow(10, decimals),
+          [],
+          TOKEN_PROGRAM_ID
+        )
+      );
+
+      const signature = await this.wallet.sendTransaction(transaction, this.connection);
+      await this.connection.confirmTransaction(signature, 'confirmed');
+
+      return {
+        txHash: signature
+      };
+    } catch (error) {
+      console.error('Error minting tokens:', error);
+      throw error;
+    }
   }
 
   // Burn tokens
   async burnTokens(tokenAddress, amount, decimals) {
-    if (!this.signer) throw new Error('Wallet not connected');
-    
-    const contract = new ethers.Contract(tokenAddress, ERC20_ABI, this.signer);
-    const parsedAmount = ethers.parseUnits(amount.toString(), decimals);
+    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
+    if (!this.connection) throw new Error('Connection not initialized');
 
-    const tx = await contract.burn(parsedAmount);
-    const receipt = await tx.wait();
-    
-    return {
-      txHash: receipt.hash,
-      blockNumber: receipt.blockNumber
-    };
+    try {
+      const mint = new PublicKey(tokenAddress);
+      const associatedToken = await getAssociatedTokenAddress(
+        mint,
+        this.publicKey,
+        false,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+
+      const transaction = new Transaction();
+
+      // Burn tokens
+      transaction.add(
+        createBurnInstruction(
+          associatedToken,
+          mint,
+          this.publicKey,
+          amount * Math.pow(10, decimals),
+          [],
+          TOKEN_PROGRAM_ID
+        )
+      );
+
+      const signature = await this.wallet.sendTransaction(transaction, this.connection);
+      await this.connection.confirmTransaction(signature, 'confirmed');
+
+      return {
+        txHash: signature
+      };
+    } catch (error) {
+      console.error('Error burning tokens:', error);
+      throw error;
+    }
   }
 
   // Get token info
   async getTokenInfo(tokenAddress) {
-    if (!this.provider) throw new Error('Provider not initialized');
-    
-    const contract = new ethers.Contract(tokenAddress, ERC20_ABI, this.provider);
-    
-    const [name, symbol, decimals, totalSupply] = await Promise.all([
-      contract.name(),
-      contract.symbol(),
-      contract.decimals(),
-      contract.totalSupply()
-    ]);
+    if (!this.connection) throw new Error('Connection not initialized');
 
-    return {
-      name,
-      symbol,
-      decimals: Number(decimals),
-      totalSupply: ethers.formatUnits(totalSupply, decimals)
-    };
-  }
+    try {
+      const mint = new PublicKey(tokenAddress);
+      const mintInfo = await getMint(this.connection, mint);
 
-  // Add Liquidity (Token + Native)
-  async addLiquidityETH(network, tokenAddress, tokenAmount, ethAmount, decimals) {
-    if (!this.signer) throw new Error('Wallet not connected');
-    
-    const routerAddress = CONTRACT_ADDRESSES[network].DEXRouter;
-    const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, this.signer);
-    const routerContract = new ethers.Contract(routerAddress, DEX_ROUTER_ABI, this.signer);
-
-    // Approve token spending
-    const parsedTokenAmount = ethers.parseUnits(tokenAmount.toString(), decimals);
-    const approveTx = await tokenContract.approve(routerAddress, parsedTokenAmount);
-    await approveTx.wait();
-
-    // Add liquidity
-    const deadline = Math.floor(Date.now() / 1000) + 60 * 20; // 20 minutes
-    const tx = await routerContract.addLiquidityETH(
-      tokenAddress,
-      parsedTokenAmount,
-      0, // amountTokenMin (0 for simplicity, should calculate slippage)
-      0, // amountETHMin
-      this.account,
-      deadline,
-      { value: ethers.parseEther(ethAmount.toString()) }
-    );
-
-    const receipt = await tx.wait();
-    return {
-      txHash: receipt.hash,
-      blockNumber: receipt.blockNumber
-    };
-  }
-
-  // Swap tokens
-  async swapTokens(network, fromToken, toToken, amountIn, amountOutMin, decimalsIn, isFromNative, isToNative) {
-    if (!this.signer) throw new Error('Wallet not connected');
-    
-    const routerAddress = CONTRACT_ADDRESSES[network].DEXRouter;
-    const routerContract = new ethers.Contract(routerAddress, DEX_ROUTER_ABI, this.signer);
-    const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
-
-    let tx;
-
-    if (isFromNative) {
-      // Swap ETH for Tokens
-      const path = [ethers.ZeroAddress, toToken]; // Use zero address for native token
-      tx = await routerContract.swapExactETHForTokens(
-        ethers.parseUnits(amountOutMin.toString(), 18),
-        path,
-        this.account,
-        deadline,
-        { value: ethers.parseEther(amountIn.toString()) }
-      );
-    } else if (isToNative) {
-      // Swap Tokens for ETH
-      const tokenContract = new ethers.Contract(fromToken, ERC20_ABI, this.signer);
-      const parsedAmount = ethers.parseUnits(amountIn.toString(), decimalsIn);
-      
-      // Approve
-      const approveTx = await tokenContract.approve(routerAddress, parsedAmount);
-      await approveTx.wait();
-
-      const path = [fromToken, ethers.ZeroAddress];
-      tx = await routerContract.swapExactTokensForETH(
-        parsedAmount,
-        ethers.parseEther(amountOutMin.toString()),
-        path,
-        this.account,
-        deadline
-      );
-    } else {
-      // Swap Token for Token
-      const tokenContract = new ethers.Contract(fromToken, ERC20_ABI, this.signer);
-      const parsedAmount = ethers.parseUnits(amountIn.toString(), decimalsIn);
-      
-      // Approve
-      const approveTx = await tokenContract.approve(routerAddress, parsedAmount);
-      await approveTx.wait();
-
-      const path = [fromToken, toToken];
-      tx = await routerContract.swapExactTokensForTokens(
-        parsedAmount,
-        0, // amountOutMin (should calculate with slippage)
-        path,
-        this.account,
-        deadline
-      );
+      return {
+        address: tokenAddress,
+        decimals: mintInfo.decimals,
+        supply: Number(mintInfo.supply) / Math.pow(10, mintInfo.decimals),
+        mintAuthority: mintInfo.mintAuthority?.toString() || null,
+        freezeAuthority: mintInfo.freezeAuthority?.toString() || null
+      };
+    } catch (error) {
+      console.error('Error getting token info:', error);
+      throw error;
     }
-
-    const receipt = await tx.wait();
-    return {
-      txHash: receipt.hash,
-      blockNumber: receipt.blockNumber
-    };
   }
 
-  // Create Presale
+  // Add Liquidity (simplified for SVM)
+  async addLiquidity(network, tokenAddress, tokenAmount, solAmount, decimals) {
+    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
+    if (!this.connection) this.initConnection(network);
+
+    try {
+      // This would interact with a DEX program like Raydium or Orca
+      // For now, this is a placeholder
+      const transaction = new Transaction();
+
+      // Add SOL transfer
+      transaction.add(
+        SystemProgram.transfer({
+          fromPubkey: this.publicKey,
+          toPubkey: new PublicKey(PROGRAM_ADDRESSES[network].DEXProgram),
+          lamports: solAmount * LAMPORTS_PER_SOL
+        })
+      );
+
+      const signature = await this.wallet.sendTransaction(transaction, this.connection);
+      await this.connection.confirmTransaction(signature, 'confirmed');
+
+      return {
+        txHash: signature
+      };
+    } catch (error) {
+      console.error('Error adding liquidity:', error);
+      throw error;
+    }
+  }
+
+  // Swap tokens (simplified)
+  async swapTokens(network, fromToken, toToken, amountIn, decimals) {
+    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
+    if (!this.connection) this.initConnection(network);
+
+    try {
+      // This would interact with a DEX program
+      // Placeholder implementation
+      const transaction = new Transaction();
+
+      const signature = await this.wallet.sendTransaction(transaction, this.connection);
+      await this.connection.confirmTransaction(signature, 'confirmed');
+
+      return {
+        txHash: signature
+      };
+    } catch (error) {
+      console.error('Error swapping tokens:', error);
+      throw error;
+    }
+  }
+
+  // Create Presale (simplified)
   async createPresale(network, presaleData, fee) {
-    if (!this.signer) throw new Error('Wallet not connected');
-    
-    const contractAddress = CONTRACT_ADDRESSES[network].PresaleFactory;
-    const contract = new ethers.Contract(contractAddress, PRESALE_FACTORY_ABI, this.signer);
+    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
+    if (!this.connection) this.initConnection(network);
 
-    const startTime = Math.floor(new Date(presaleData.startDate).getTime() / 1000);
-    const endTime = Math.floor(new Date(presaleData.endDate).getTime() / 1000);
+    try {
+      const transaction = new Transaction();
 
-    const tx = await contract.createPresale(
-      presaleData.tokenAddress,
-      ethers.parseEther(presaleData.softCap.toString()),
-      ethers.parseEther(presaleData.hardCap.toString()),
-      startTime,
-      endTime,
-      ethers.parseEther(presaleData.minContribution.toString()),
-      ethers.parseEther(presaleData.maxContribution.toString()),
-      { value: ethers.parseEther(fee.toString()) }
-    );
+      // Add fee payment
+      if (fee > 0) {
+        transaction.add(
+          SystemProgram.transfer({
+            fromPubkey: this.publicKey,
+            toPubkey: new PublicKey(PROGRAM_ADDRESSES[network].PresaleProgram),
+            lamports: fee * LAMPORTS_PER_SOL
+          })
+        );
+      }
 
-    const receipt = await tx.wait();
-    const presaleAddress = receipt.logs[0].address;
-    
-    return {
-      txHash: receipt.hash,
-      presaleAddress,
-      blockNumber: receipt.blockNumber
-    };
+      const signature = await this.wallet.sendTransaction(transaction, this.connection);
+      await this.connection.confirmTransaction(signature, 'confirmed');
+
+      return {
+        txHash: signature,
+        presaleAddress: 'PRESALE_ACCOUNT_ADDRESS' // Would be generated from program
+      };
+    } catch (error) {
+      console.error('Error creating presale:', error);
+      throw error;
+    }
   }
 
   // Invest in Presale
   async investInPresale(presaleAddress, amount) {
-    if (!this.signer) throw new Error('Wallet not connected');
-    
-    const contract = new ethers.Contract(presaleAddress, PRESALE_ABI, this.signer);
-    
-    const tx = await contract.invest({
-      value: ethers.parseEther(amount.toString())
-    });
+    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
+    if (!this.connection) throw new Error('Connection not initialized');
 
-    const receipt = await tx.wait();
-    return {
-      txHash: receipt.hash,
-      blockNumber: receipt.blockNumber
-    };
-  }
+    try {
+      const transaction = new Transaction();
 
-  // Estimate gas for transaction
-  async estimateGas(to, data, value) {
-    if (!this.provider) throw new Error('Provider not initialized');
-    
-    const gasEstimate = await this.provider.estimateGas({
-      to,
-      data,
-      value: value ? ethers.parseEther(value.toString()) : undefined
-    });
+      transaction.add(
+        SystemProgram.transfer({
+          fromPubkey: this.publicKey,
+          toPubkey: new PublicKey(presaleAddress),
+          lamports: amount * LAMPORTS_PER_SOL
+        })
+      );
 
-    const feeData = await this.provider.getFeeData();
-    const gasCost = gasEstimate * feeData.gasPrice;
-    
-    return {
-      gasLimit: gasEstimate.toString(),
-      gasPrice: ethers.formatUnits(feeData.gasPrice, 'gwei'),
-      totalCost: ethers.formatEther(gasCost)
-    };
+      const signature = await this.wallet.sendTransaction(transaction, this.connection);
+      await this.connection.confirmTransaction(signature, 'confirmed');
+
+      return {
+        txHash: signature
+      };
+    } catch (error) {
+      console.error('Error investing in presale:', error);
+      throw error;
+    }
   }
 }
 
-export const web3Service = new Web3Service();
+export const web3Service = new SolanaWeb3Service();
