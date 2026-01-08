@@ -1,13 +1,17 @@
-import { 
+import * as web3 from '@solana/web3.js';
+import * as splToken from '@solana/spl-token';
+import { NETWORK_CONFIG, PROGRAM_ADDRESSES, FEE_RECIPIENT_ADDRESS, TOKEN_CREATION_FEE, PRESALE_CREATION_FEE, DIRECT_MINT_FEE } from './contracts';
+
+const { 
   Connection, 
   PublicKey, 
   Transaction, 
   SystemProgram,
   LAMPORTS_PER_SOL,
-  clusterApiUrl,
   Keypair
-} from '@solana/web3.js';
-import {
+} = web3;
+
+const {
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
   createInitializeMintInstruction,
@@ -16,15 +20,8 @@ import {
   createBurnInstruction,
   getAssociatedTokenAddress,
   getMint,
-  getAccount,
-  createInitializeMetadataPointerInstruction,
-  createInitializeMintCloseAuthorityInstruction,
-  TYPE_SIZE,
-  LENGTH_SIZE,
-  ExtensionType,
   getMintLen
-} from '@solana/spl-token';
-import { NETWORK_CONFIG, PROGRAM_ADDRESSES, FEE_RECIPIENT_ADDRESS, TOKEN_CREATION_FEE, PRESALE_CREATION_FEE, DIRECT_MINT_FEE } from './contracts';
+} = splToken;
 
 class SolanaWeb3Service {
   constructor() {
