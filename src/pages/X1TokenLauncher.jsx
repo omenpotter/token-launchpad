@@ -51,6 +51,12 @@ export default function X1TokenLauncher() {
   const [mintAmount, setMintAmount] = useState(100);
   const [burnAmount, setBurnAmount] = useState(0);
   
+  // Presale & Investment
+  const [selectedTokenForPresale, setSelectedTokenForPresale] = useState('');
+  const [selectedPresale, setSelectedPresale] = useState(null);
+  const [investAmount, setInvestAmount] = useState(0);
+  const [showInvestModal, setShowInvestModal] = useState(false);
+  
   // UI
   const [activeTab, setActiveTab] = useState('create');
 
@@ -323,10 +329,6 @@ export default function X1TokenLauncher() {
     { id: 'launchpad', label: 'Launchpad', icon: Rocket },
     { id: 'trade', label: 'Trade', icon: TrendingUp }
   ];
-  
-  const [selectedPresale, setSelectedPresale] = useState(null);
-  const [investAmount, setInvestAmount] = useState(0);
-  const [showInvestModal, setShowInvestModal] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
