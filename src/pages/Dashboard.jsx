@@ -34,8 +34,9 @@ export default function DashboardPage() {
         
         <DashboardTab
           createdTokens={createdTokens}
-          setCreatedTokens={async () => {
-            await refetchTokens();
+          setCreatedTokens={(updatedTokens) => {
+            // Update function - refetch will be called after DB updates
+            refetchTokens();
           }}
           network="x1Mainnet"
           onQuickAction={(action, tokenId) => {
