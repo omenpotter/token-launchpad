@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
 import { Coins, ExternalLink, Clock, Shield, Copy, CheckCircle, Zap, Flame, Rocket, Eye, Edit2, Lock, Users, TrendingUp, BarChart3, Droplets, Send } from 'lucide-react';
 import { motion } from 'framer-motion';
-import TokenAnalytics from './TokenAnalytics';
+import EnhancedTokenAnalytics from './EnhancedTokenAnalytics';
 import LiquidityManagement from './LiquidityManagement';
 import SendToMintingModal from './SendToMintingModal';
 
@@ -42,6 +42,11 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
       immutable: token.immutable || false,
       fairMint: token.fairMint || false,
       maxPerWallet: token.maxPerWallet || 1000,
+      lockEnabled: token.lockEnabled || false,
+      lockDuration: token.lockDuration || 30,
+      lockReleaseDate: token.lockReleaseDate || '',
+      buyTax: token.buyTax || 0,
+      sellTax: token.sellTax || 0,
       website: token.website || '',
       telegram: token.telegram || '',
       twitter: token.twitter || '',
@@ -275,7 +280,7 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
                   exit={{ opacity: 0, height: 0 }}
                   className="border-t border-slate-700/50 pt-4 mt-4"
                 >
-                  <TokenAnalytics token={token} />
+                  <EnhancedTokenAnalytics token={token} />
                 </motion.div>
               )}
 
@@ -417,6 +422,103 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
                         )}
                       </div>
                     )}
+
+                    {/* Token Lock Settings */}
+                    <div className="p-3 bg-slate-700/30 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Lock className="w-4 h-4 text-slate-400" />
+                          <span className="text-sm text-slate-300">Token Lock Enabled</span>
+                        </div>
+                        {editingTokenId === token.id ? (
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={editValues.lockEnabled} 
+                              onChange={(e) => setEditValues({...editValues, lockEnabled: e.target.checked})}
+                              className="sr-only peer" 
+                            />
+                            <div className="w-9 h-5 bg-slate-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div>
+                          </label>
+                        ) : (
+                          <span className={`text-sm font-medium ${token.lockEnabled ? 'text-green-400' : 'text-slate-500'}`}>
+                            {token.lockEnabled ? 'Yes' : 'No'}
+                          </span>
+                        )}
+                      </div>
+                      {(editingTokenId === token.id ? editValues.lockEnabled : token.lockEnabled) && (
+                        <div className="grid grid-cols-2 gap-3 mt-3">
+                          <div>
+                            <label className="text-xs text-slate-400 mb-1 block">Duration (Days)</label>
+                            {editingTokenId === token.id ? (
+                              <input
+                                type="number"
+                                value={editValues.lockDuration}
+                                onChange={(e) => setEditValues({...editValues, lockDuration: Number(e.target.value)})}
+                                className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm"
+                              />
+                            ) : (
+                              <span className="text-white text-sm">{token.lockDuration || 'N/A'}</span>
+                            )}
+                          </div>
+                          <div>
+                            <label className="text-xs text-slate-400 mb-1 block">Release Date</label>
+                            {editingTokenId === token.id ? (
+                              <input
+                                type="date"
+                                value={editValues.lockReleaseDate}
+                                onChange={(e) => setEditValues({...editValues, lockReleaseDate: e.target.value})}
+                                className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm"
+                              />
+                            ) : (
+                              <span className="text-white text-sm">{token.lockReleaseDate || 'N/A'}</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Tax Settings */}
+                    <div className="p-3 bg-slate-700/30 rounded-lg">
+                      <label className="text-sm text-slate-300 mb-2 block flex items-center gap-2">
+                        <Coins className="w-4 h-4" />
+                        Transaction Taxes
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-slate-400 mb-1 block">Buy Tax (%)</label>
+                          {editingTokenId === token.id ? (
+                            <input
+                              type="number"
+                              min={0}
+                              max={3}
+                              step={0.1}
+                              value={editValues.buyTax}
+                              onChange={(e) => setEditValues({...editValues, buyTax: Math.min(3, Math.max(0, Number(e.target.value)))})}
+                              className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm"
+                            />
+                          ) : (
+                            <span className="text-white text-sm">{token.buyTax || 0}%</span>
+                          )}
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-400 mb-1 block">Sell Tax (%)</label>
+                          {editingTokenId === token.id ? (
+                            <input
+                              type="number"
+                              min={0}
+                              max={3}
+                              step={0.1}
+                              value={editValues.sellTax}
+                              onChange={(e) => setEditValues({...editValues, sellTax: Math.min(3, Math.max(0, Number(e.target.value)))})}
+                              className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm"
+                            />
+                          ) : (
+                            <span className="text-white text-sm">{token.sellTax || 0}%</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
                     {editingTokenId === token.id && (
                       <>

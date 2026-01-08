@@ -34,6 +34,8 @@ export default function CreateTokenPage() {
   const [fairMintEnabled, setFairMintEnabled] = useState(false);
   const [maxPerWallet, setMaxPerWallet] = useState(1000);
   const [immutableToken, setImmutableToken] = useState(false);
+  const [buyTax, setBuyTax] = useState(0);
+  const [sellTax, setSellTax] = useState(0);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [approvalData, setApprovalData] = useState(null);
   const [approvalLoading, setApprovalLoading] = useState(false);
@@ -100,6 +102,8 @@ export default function CreateTokenPage() {
         lockEnabled: lockEnabled,
         lockDuration: lockDuration,
         lockReleaseDate: lockReleaseDate,
+        buyTax: buyTax,
+        sellTax: sellTax,
         totalMinted: 0,
         burned: 0,
         txHash: result.txHash,
@@ -189,6 +193,10 @@ export default function CreateTokenPage() {
           setMaxPerWallet={setMaxPerWallet}
           immutableToken={immutableToken}
           setImmutableToken={setImmutableToken}
+          buyTax={buyTax}
+          setBuyTax={setBuyTax}
+          sellTax={sellTax}
+          setSellTax={setSellTax}
           walletConnected={walletConnected}
           creationFee={TOKEN_CREATION_FEE}
           currency="XNT"

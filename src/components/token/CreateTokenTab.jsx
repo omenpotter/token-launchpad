@@ -43,6 +43,10 @@ export default function CreateTokenTab({
   setMaxPerWallet,
   immutableToken,
   setImmutableToken,
+  buyTax,
+  setBuyTax,
+  sellTax,
+  setSellTax,
   walletConnected,
   creationFee,
   currency,
@@ -339,6 +343,43 @@ export default function CreateTokenTab({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Tax Settings */}
+          <div className="p-4 bg-slate-700/30 rounded-xl space-y-3">
+            <div className="flex items-center gap-3 mb-3">
+              <Coins className="w-5 h-5 text-slate-400" />
+              <div>
+                <p className="text-white font-medium">Transaction Taxes</p>
+                <p className="text-xs text-slate-400">Set buy and sell tax percentages (0-3%)</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">Buy Tax (%)</label>
+                <input
+                  type="number"
+                  value={buyTax}
+                  onChange={(e) => setBuyTax(Math.min(3, Math.max(0, Number(e.target.value))))}
+                  min={0}
+                  max={3}
+                  step={0.1}
+                  className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">Sell Tax (%)</label>
+                <input
+                  type="number"
+                  value={sellTax}
+                  onChange={(e) => setSellTax(Math.min(3, Math.max(0, Number(e.target.value))))}
+                  min={0}
+                  max={3}
+                  step={0.1}
+                  className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
