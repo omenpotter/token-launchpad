@@ -1,5 +1,6 @@
 import React from 'react';
 import { Coins, Shield, Globe, Image, Lock, Users, Zap, Info } from 'lucide-react';
+import AIDescriptionGenerator from './AIDescriptionGenerator';
 
 export default function CreateTokenTab({
   network,
@@ -139,6 +140,14 @@ export default function CreateTokenTab({
           </div>
         </div>
       </div>
+
+      {/* AI Description Generator */}
+      <AIDescriptionGenerator
+        tokenName={tokenName}
+        tokenSymbol={tokenSymbol}
+        tokenWebsite={tokenWebsite}
+        onApplyDescription={setTokenDescription}
+      />
 
       {/* Token Metadata */}
       <div className="bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50">

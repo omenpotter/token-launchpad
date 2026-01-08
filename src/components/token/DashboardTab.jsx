@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
-import { Coins, ExternalLink, Clock, Shield, Copy, CheckCircle, Zap, Flame, Rocket, Eye, Edit2, Lock, Users, TrendingUp } from 'lucide-react';
+import { Coins, ExternalLink, Clock, Shield, Copy, CheckCircle, Zap, Flame, Rocket, Eye, Edit2, Lock, Users, TrendingUp, BarChart3, Droplets } from 'lucide-react';
 import { motion } from 'framer-motion';
+import TokenAnalytics from './TokenAnalytics';
+import LiquidityManagement from './LiquidityManagement';
 
 export default function DashboardTab({ createdTokens, setCreatedTokens, network, onQuickAction, presales }) {
   const [copiedId, setCopiedId] = useState(null);
   const [expandedTokenId, setExpandedTokenId] = useState(null);
   const [editingTokenId, setEditingTokenId] = useState(null);
   const [editValues, setEditValues] = useState({});
+  const [showAnalytics, setShowAnalytics] = useState(null);
+  const [showLiquidity, setShowLiquidity] = useState(null);
 
   const copyToClipboard = (text, id) => {
     navigator.clipboard.writeText(text);
@@ -185,6 +189,24 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
                 </button>
               </div>
 
+              {/* Analytics & Liquidity Actions */}
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <button
+                  onClick={() => setShowAnalytics(showAnalytics === token.id ? null : token.id)}
+                  className="flex items-center justify-center gap-2 px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-lg transition text-sm font-medium"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  {showAnalytics === token.id ? 'Hide' : 'Show'} Analytics
+                </button>
+                <button
+                  onClick={() => setShowLiquidity(showLiquidity === token.id ? null : token.id)}
+                  className="flex items-center justify-center gap-2 px-3 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 rounded-lg transition text-sm font-medium"
+                >
+                  <Droplets className="w-4 h-4" />
+                  Manage Liquidity
+                </button>
+              </div>
+
               {/* Token Presales */}
               {getTokenPresales(token.id).length > 0 && (
                 <div className="mb-4 p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl">
@@ -203,6 +225,39 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
                     ))}
                   </div>
                 </div>
+              )}
+
+              {/* Analytics Section */}
+              {showAnalytics === token.id && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="border-t border-slate-700/50 pt-4 mt-4"
+                >
+                  <TokenAnalytics token={token} />
+                </motion.div>
+              )}
+
+              {/* Liquidity Management */}
+              {showLiquidity === token.id && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="border-t border-slate-700/50 pt-4 mt-4"
+                >
+                  <LiquidityManagement 
+                    token={token}
+                    currency={network.includes('x1') ? 'XNT' : 'SOL'}
+                    onAddLiquidity={(tokenAmount, currencyAmount) => {
+                      alert(`Added ${tokenAmount} ${token.symbol} + ${currencyAmount} XNT to liquidity pool`);
+                    }}
+                    onRemoveLiquidity={(percentage) => {
+                      alert(`Removed ${percentage}% of your liquidity`);
+                    }}
+                  />
+                </motion.div>
               )}
 
               {/* Advanced Options */}
