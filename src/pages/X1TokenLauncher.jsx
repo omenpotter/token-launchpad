@@ -1,6 +1,6 @@
 import '../components/token/web3/polyfills';
 import React, { useState, useEffect } from 'react';
-import { Wallet, Coins, Zap, LayoutDashboard, Rocket, LogOut, TrendingUp, Droplets, Send } from 'lucide-react';
+import { Wallet, Coins, Zap, LayoutDashboard, Rocket, LogOut, TrendingUp, Droplets, Send, MessageCircle, Twitter } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
@@ -496,10 +496,12 @@ export default function X1TokenLauncher() {
             <a href="https://xdex.xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition">
               xDEX
             </a>
-            <a href="https://t.me/xdex_xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition">
+            <a href="https://t.me/xdex_xyz" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-slate-400 hover:text-cyan-400 transition">
+              <MessageCircle className="w-4 h-4" />
               Telegram
             </a>
-            <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition">
+            <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-slate-400 hover:text-cyan-400 transition">
+              <Twitter className="w-4 h-4" />
               Twitter
             </a>
           </div>
@@ -725,11 +727,11 @@ export default function X1TokenLauncher() {
               <a href="https://xdex.xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition text-sm">
                 xDEX.xyz
               </a>
-              <a href="https://t.me/xdex_xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition text-sm">
-                Telegram
+              <a href="https://t.me/xdex_xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition">
+                <MessageCircle className="w-5 h-5" />
               </a>
-              <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition text-sm">
-                @rkbehelvi
+              <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition">
+                <Twitter className="w-5 h-5" />
               </a>
             </div>
           </div>
