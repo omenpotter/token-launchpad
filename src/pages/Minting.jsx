@@ -138,13 +138,27 @@ export default function MintingPage() {
             <h1 className="text-3xl font-bold text-white mb-2">X1Space Launcher</h1>
             <p className="text-slate-400">Mint, burn, and manage tokens on X1 Mainnet</p>
           </div>
-          <Link
-            to={createPageUrl('CreateToken')}
-            className="inline-flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-xl transition font-medium"
-          >
-            <Plus className="w-5 h-5" />
-            Create Token
-          </Link>
+          <div className="flex gap-3">
+            <Link
+              to={createPageUrl('CreateToken')}
+              className="inline-flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-xl transition font-medium"
+            >
+              <Plus className="w-5 h-5" />
+              Create Token
+            </Link>
+            <Link
+              to={createPageUrl('Trade')}
+              className="inline-flex items-center gap-2 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition font-medium"
+            >
+              Trade
+            </Link>
+            <Link
+              to={createPageUrl('TokenVerification')}
+              className="inline-flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white rounded-xl transition font-medium"
+            >
+              Token Verification
+            </Link>
+          </div>
         </div>
         
         <MintingTab

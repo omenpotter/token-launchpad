@@ -387,8 +387,8 @@ export default function X1TokenLauncher() {
   };
 
   const tabs = [
-    { id: 'create', label: 'Create Token', icon: Coins, path: 'CreateToken' },
     { id: 'minting', label: 'Minting', icon: Zap, path: 'Minting' },
+    { id: 'create', label: 'Create Token', icon: Coins, path: 'CreateToken' },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: 'Dashboard' },
     { id: 'launchpad', label: 'Launchpad', icon: Rocket, path: 'Launchpad' },
     { id: 'liquidity', label: 'Liquidity Pool', icon: Droplets, path: 'LiquidityPool' },
