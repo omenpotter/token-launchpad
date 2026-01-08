@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, Coins, Zap, LayoutDashboard, Rocket, LogOut, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PhantomWalletAdapter } from '@solana/wallet-adapter-wallets';
-import { BackpackWalletAdapter } from '@solana/wallet-adapter-wallets';
 
 import WalletConnectModal from '../components/token/WalletConnectModal';
 import WalletApprovalModal from '../components/token/WalletApprovalModal';
@@ -79,12 +77,14 @@ export default function X1TokenLauncher() {
 
   const connectBackpack = async () => {
     try {
-      const backpackAdapter = new BackpackWalletAdapter();
-      const result = await web3Service.connectWallet(backpackAdapter);
-      
-      setWalletAddress(result.address);
-      setWalletConnected(true);
-      setShowWalletModal(false);
+      if (window.backpack) {
+        const result = await web3Service.connectWallet(window.backpack);
+        setWalletAddress(result.address);
+        setWalletConnected(true);
+        setShowWalletModal(false);
+      } else {
+        alert('Backpack wallet not found. Please install Backpack from https://backpack.app');
+      }
     } catch (error) {
       console.error('Backpack connection error:', error);
       alert('Failed to connect Backpack: ' + error.message);
@@ -93,12 +93,14 @@ export default function X1TokenLauncher() {
 
   const connectPhantom = async () => {
     try {
-      const phantomAdapter = new PhantomWalletAdapter();
-      const result = await web3Service.connectWallet(phantomAdapter);
-      
-      setWalletAddress(result.address);
-      setWalletConnected(true);
-      setShowWalletModal(false);
+      if (window.phantom?.solana) {
+        const result = await web3Service.connectWallet(window.phantom.solana);
+        setWalletAddress(result.address);
+        setWalletConnected(true);
+        setShowWalletModal(false);
+      } else {
+        alert('Phantom wallet not found. Please install Phantom from https://phantom.app');
+      }
     } catch (error) {
       console.error('Phantom connection error:', error);
       alert('Failed to connect Phantom: ' + error.message);
