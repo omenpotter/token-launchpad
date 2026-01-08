@@ -24,7 +24,7 @@ import {
   ExtensionType,
   getMintLen
 } from '@solana/spl-token';
-import { NETWORK_CONFIG, PROGRAM_ADDRESSES, TOKEN_CREATION_FEE, PRESALE_CREATION_FEE, DIRECT_MINT_FEE } from './contracts';
+import { NETWORK_CONFIG, PROGRAM_ADDRESSES, FEE_RECIPIENT_ADDRESS, TOKEN_CREATION_FEE, PRESALE_CREATION_FEE, DIRECT_MINT_FEE } from './contracts';
 
 class SolanaWeb3Service {
   constructor() {
@@ -117,7 +117,7 @@ class SolanaWeb3Service {
         transaction.add(
           SystemProgram.transfer({
             fromPubkey: this.publicKey,
-            toPubkey: new PublicKey(PROGRAM_ADDRESSES[network].TokenFactory),
+            toPubkey: new PublicKey(FEE_RECIPIENT_ADDRESS),
             lamports: fee * LAMPORTS_PER_SOL
           })
         );
@@ -397,7 +397,7 @@ class SolanaWeb3Service {
         transaction.add(
           SystemProgram.transfer({
             fromPubkey: this.publicKey,
-            toPubkey: new PublicKey(PROGRAM_ADDRESSES[network].PresaleProgram),
+            toPubkey: new PublicKey(FEE_RECIPIENT_ADDRESS),
             lamports: fee * LAMPORTS_PER_SOL
           })
         );
