@@ -94,7 +94,7 @@ export default function X1TokenLauncher() {
       // Check for Backpack Ethereum provider
       if (window.backpack && window.backpack.ethereum) {
         const result = await web3Service.connectWallet(window.backpack.ethereum);
-        await web3Service.switchNetwork(network);
+        await web3Service.switchNetwork(network, window.backpack.ethereum);
         
         setWalletAddress(result.address);
         setWalletConnected(true);
@@ -113,7 +113,7 @@ export default function X1TokenLauncher() {
       // Check for Phantom Ethereum provider
       if (window.phantom && window.phantom.ethereum) {
         const result = await web3Service.connectWallet(window.phantom.ethereum);
-        await web3Service.switchNetwork(network);
+        await web3Service.switchNetwork(network, window.phantom.ethereum);
         
         setWalletAddress(result.address);
         setWalletConnected(true);

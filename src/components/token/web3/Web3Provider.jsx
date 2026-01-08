@@ -10,14 +10,16 @@ class Web3Service {
   }
 
   // Connect wallet
-  async connectWallet() {
-    if (typeof window.ethereum === 'undefined') {
+  async connectWallet(customProvider = null) {
+    const ethereumProvider = customProvider || window.ethereum;
+    
+    if (typeof ethereumProvider === 'undefined') {
       throw new Error('Please install MetaMask or another Web3 wallet');
     }
 
     try {
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
-      this.provider = new ethers.BrowserProvider(window.ethereum);
+      await ethereumProvider.request({ method: 'eth_requestAccounts' });
+      this.provider = new ethers.BrowserProvider(ethereumProvider);
       this.signer = await this.provider.getSigner();
       this.account = await this.signer.getAddress();
       
@@ -25,7 +27,7 @@ class Web3Service {
       this.chainId = network.chainId.toString();
 
       // Listen for account changes
-      window.ethereum.on('accountsChanged', (accounts) => {
+      ethereumProvider.on('accountsChanged', (accounts) => {
         if (accounts.length === 0) {
           this.disconnect();
         } else {
@@ -34,7 +36,7 @@ class Web3Service {
       });
 
       // Listen for chain changes
-      window.ethereum.on('chainChanged', () => {
+      ethereumProvider.on('chainChanged', () => {
         window.location.reload();
       });
 
@@ -57,19 +59,20 @@ class Web3Service {
   }
 
   // Switch network
-  async switchNetwork(network) {
+  async switchNetwork(network, customProvider = null) {
+    const ethereumProvider = customProvider || window.ethereum;
     const config = NETWORK_CONFIG[network];
     if (!config) throw new Error('Invalid network');
 
     try {
-      await window.ethereum.request({
+      await ethereumProvider.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: config.chainId }]
       });
     } catch (switchError) {
       // Network doesn't exist, add it
       if (switchError.code === 4902) {
-        await window.ethereum.request({
+        await ethereumProvider.request({
           method: 'wallet_addEthereumChain',
           params: [config]
         });
