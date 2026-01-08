@@ -1,3 +1,4 @@
+import '../components/token/web3/polyfills';
 import React, { useState } from 'react';
 import { Zap, Flame, TrendingUp, Coins, Layers, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
