@@ -93,7 +93,7 @@ class SolanaWeb3Service {
 
     try {
       // Generate new keypair for mint
-      const mintKeypair = await this.wallet.generateKeypair();
+      const mintKeypair = Keypair.generate();
       const mint = mintKeypair.publicKey;
 
       // Get associated token account
