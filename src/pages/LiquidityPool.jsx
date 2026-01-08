@@ -1,8 +1,10 @@
+import '../components/token/web3/polyfills';
 import React, { useState, useEffect } from 'react';
-import { Droplets, Plus, Minus, TrendingUp, ArrowRight, Info, ExternalLink } from 'lucide-react';
+import { Droplets, Plus, Minus, TrendingUp, ArrowRight, Info, ExternalLink, Lock, Calendar, Wallet } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
+import { web3Service } from '../components/token/web3/Web3Provider';
 
 export default function LiquidityPoolPage() {
   const [tokenA, setTokenA] = useState('');
@@ -11,12 +13,22 @@ export default function LiquidityPoolPage() {
   const [amountB, setAmountB] = useState('');
   const [slippage, setSlippage] = useState(0.5);
   const [activeTab, setActiveTab] = useState('add');
+  const [walletConnected, setWalletConnected] = useState(false);
+  const [walletAddress, setWalletAddress] = useState('');
+  const [lockEnabled, setLockEnabled] = useState(false);
+  const [lockDuration, setLockDuration] = useState(30);
+  const [isLoading, setIsLoading] = useState(false);
+  const [removePercentage, setRemovePercentage] = useState(50);
 
   const { data: tokens = [] } = useQuery({
     queryKey: ['tokens'],
     queryFn: () => base44.entities.Token.list(),
     initialData: []
   });
+
+  useEffect(() => {
+    web3Service.initConnection('x1Testnet');
+  }, []);
 
   // Mock liquidity pools
   const mockPools = tokens.slice(0, 3).map(token => ({
@@ -29,6 +41,24 @@ export default function LiquidityPoolPage() {
     volume24h: (Math.random() * 10000).toFixed(2),
     apr: (Math.random() * 150).toFixed(2)
   }));
+
+  const connectWallet = async () => {
+    try {
+      if (window.phantom?.solana) {
+        const result = await web3Service.connectWallet(window.phantom.solana);
+        setWalletAddress(result.address);
+        setWalletConnected(true);
+      } else if (window.backpack) {
+        const result = await web3Service.connectWallet(window.backpack);
+        setWalletAddress(result.address);
+        setWalletConnected(true);
+      } else {
+        alert('Please install Phantom or Backpack wallet');
+      }
+    } catch (error) {
+      alert('Failed to connect wallet: ' + error.message);
+    }
+  };
 
   const handleAddLiquidity = async () => {
     if (!tokenA || !tokenB || !amountA || !amountB) {
@@ -50,7 +80,7 @@ export default function LiquidityPoolPage() {
         9
       );
       
-      alert(`✅ Liquidity added successfully!\nTx: ${result.txHash}`);
+      alert(`✅ Liquidity added successfully!\nTx: ${result.txHash}${lockEnabled ? `\nLocked for ${lockDuration} days` : ''}`);
       setAmountA('');
       setAmountB('');
     } catch (error) {
@@ -69,7 +99,6 @@ export default function LiquidityPoolPage() {
     setIsLoading(true);
     try {
       alert(`Removing ${removePercentage}% liquidity from ${tokenA}/${tokenB} pool`);
-      setRemovePercentage(50);
     } catch (error) {
       alert('Failed to remove liquidity: ' + error.message);
     } finally {
@@ -77,46 +106,40 @@ export default function LiquidityPoolPage() {
     }
   };
 
-  const connectWallet = async () => {
-    try {
-      if (window.phantom?.solana) {
-        const result = await web3Service.connectWallet(window.phantom.solana);
-        setWalletAddress(result.address);
-        setWalletConnected(true);
-      } else if (window.backpack) {
-        const result = await web3Service.connectWallet(window.backpack);
-        setWalletAddress(result.address);
-        setWalletConnected(true);
-      } else {
-        alert('Please install Phantom or Backpack wallet');
-      }
-    } catch (error) {
-      alert('Failed to connect wallet: ' + error.message);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-              <Droplets className="w-6 h-6 text-cyan-400" />
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                <Droplets className="w-6 h-6 text-cyan-400" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white">Liquidity Pools</h1>
+                <p className="text-slate-400">Add liquidity and earn fees from trades</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-white">Liquidity Pools</h1>
-              <p className="text-slate-400">Add liquidity and earn fees from trades</p>
-            </div>
+            <a 
+              href="https://app.xdex.xyz/swap" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm text-cyan-400 hover:text-cyan-300 transition"
+            >
+              Powered by xDEX <ExternalLink className="w-3 h-3" />
+            </a>
           </div>
-          <a 
-            href="https://app.xdex.xyz/swap" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-sm text-cyan-400 hover:text-cyan-300 transition"
-          >
-            Powered by xDEX <ExternalLink className="w-3 h-3" />
-          </a>
+          
+          {!walletConnected && (
+            <button
+              onClick={connectWallet}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-xl transition font-medium"
+            >
+              <Wallet className="w-4 h-4" />
+              Connect Wallet
+            </button>
+          )}
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
@@ -233,6 +256,44 @@ export default function LiquidityPoolPage() {
                       </div>
                     </div>
 
+                    {/* Lock Options */}
+                    <div className="bg-slate-700/30 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Lock className="w-5 h-5 text-slate-400" />
+                          <span className="text-white font-medium">Lock Liquidity</span>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={lockEnabled}
+                            onChange={(e) => setLockEnabled(e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-slate-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
+                        </label>
+                      </div>
+                      {lockEnabled && (
+                        <div>
+                          <label className="block text-sm text-slate-400 mb-2 flex items-center gap-2">
+                            <Calendar className="w-4 h-4" />
+                            Lock Duration (Days)
+                          </label>
+                          <select
+                            value={lockDuration}
+                            onChange={(e) => setLockDuration(Number(e.target.value))}
+                            className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-4 py-3"
+                          >
+                            <option value={30}>30 Days</option>
+                            <option value={60}>60 Days</option>
+                            <option value={90}>90 Days</option>
+                            <option value={180}>180 Days</option>
+                            <option value={365}>365 Days</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+
                     {/* Info */}
                     <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-4">
                       <div className="flex items-start gap-3">
@@ -248,11 +309,11 @@ export default function LiquidityPoolPage() {
 
                     <button
                       onClick={handleAddLiquidity}
-                      disabled={!tokenA || !amountA || !amountB}
-                      className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:from-slate-600 disabled:to-slate-600 text-white font-semibold py-4 rounded-xl transition flex items-center justify-center gap-2"
+                      disabled={!walletConnected || !tokenA || !amountA || !amountB || isLoading}
+                      className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl transition flex items-center justify-center gap-2"
                     >
                       <Plus className="w-5 h-5" />
-                      Add Liquidity via xDEX
+                      {isLoading ? 'Processing...' : walletConnected ? 'Add Liquidity' : 'Connect Wallet First'}
                     </button>
                   </div>
                 ) : (
@@ -270,12 +331,13 @@ export default function LiquidityPoolPage() {
                     </div>
 
                     <div className="bg-slate-700/30 rounded-xl p-4">
-                      <label className="block text-sm text-slate-400 mb-2">Amount to Remove (%)</label>
+                      <label className="block text-sm text-slate-400 mb-2">Amount to Remove: {removePercentage}%</label>
                       <input
                         type="range"
                         min="0"
                         max="100"
-                        defaultValue="50"
+                        value={removePercentage}
+                        onChange={(e) => setRemovePercentage(Number(e.target.value))}
                         className="w-full"
                       />
                       <div className="flex justify-between text-sm text-slate-400 mt-2">
@@ -287,10 +349,11 @@ export default function LiquidityPoolPage() {
 
                     <button
                       onClick={handleRemoveLiquidity}
-                      className="w-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 text-white font-semibold py-4 rounded-xl transition flex items-center justify-center gap-2"
+                      disabled={!walletConnected || isLoading}
+                      className="w-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl transition flex items-center justify-center gap-2"
                     >
                       <Minus className="w-5 h-5" />
-                      Remove Liquidity via xDEX
+                      {isLoading ? 'Processing...' : walletConnected ? 'Remove Liquidity' : 'Connect Wallet First'}
                     </button>
                   </div>
                 )}
@@ -301,7 +364,7 @@ export default function LiquidityPoolPage() {
           {/* Active Pools */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-white">Active Pools</h3>
-            {mockPools.map(pool => (
+            {mockPools.length > 0 ? mockPools.map(pool => (
               <motion.div
                 key={pool.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -335,7 +398,12 @@ export default function LiquidityPoolPage() {
                   </div>
                 </div>
               </motion.div>
-            ))}
+            )) : (
+              <div className="bg-slate-800/50 rounded-xl p-8 border border-slate-700/50 text-center">
+                <Droplets className="w-12 h-12 text-slate-500 mx-auto mb-3" />
+                <p className="text-slate-400">No active pools yet</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
