@@ -229,11 +229,46 @@ Deno.serve(async (req) => {
     // Detect Token-2022 features
     const token2022Features = await detectToken2022Features(extensions, mintAddress);
     
-    // Detect buyback and dynamic taxes
-    const taxAnalysis = await detectBuybackAndTaxes(
-      mintAddress, 
-      token2022Features.transferHookProgram
-    );
+    // Perform advanced tax and buyback analysis
+    let taxAnalysis = {
+      hasBuyback: false,
+      buybackWallet: null,
+      taxesAreDynamic: false,
+      maxBuyTax: 0,
+      maxSellTax: 0,
+      canChangeTaxes: false
+    };
+
+    try {
+      // Call the advanced tax analysis function
+      const advancedAnalysis = await base44.asServiceRole.functions.invoke('analyzeTaxAndBuyback', {
+        mintAddress,
+        tokenType: extensions && extensions.length > 0 ? 'TOKEN2022' : 'SPL'
+      });
+
+      if (advancedAnalysis.data) {
+        taxAnalysis = {
+          hasBuyback: advancedAnalysis.data.buybackConfidence !== 'low',
+          buybackWallet: advancedAnalysis.data.buybackWallet,
+          taxesAreDynamic: advancedAnalysis.data.taxType === 'dynamic',
+          maxBuyTax: advancedAnalysis.data.buyTax || 0,
+          maxSellTax: advancedAnalysis.data.sellTax || 0,
+          canChangeTaxes: advancedAnalysis.data.taxAuthority !== 'none',
+          buybackConfidence: advancedAnalysis.data.buybackConfidence,
+          taxRiskLevel: advancedAnalysis.data.taxRiskLevel,
+          flags: advancedAnalysis.data.flags || []
+        };
+      }
+    } catch (error) {
+      console.error('Advanced tax analysis failed, using fallback:', error);
+      // Fallback to basic detection
+      if (token2022Features.transferHookProgram) {
+        taxAnalysis.taxesAreDynamic = true;
+        taxAnalysis.canChangeTaxes = true;
+        taxAnalysis.maxBuyTax = 3;
+        taxAnalysis.maxSellTax = 3;
+      }
+    }
 
     // Automated checks
     const checks = {

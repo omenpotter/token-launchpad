@@ -312,6 +312,12 @@ export default function TokenVerificationPage() {
                   {verificationResult.checks.hasTransferFee && <p>• Transfer Fee Extension</p>}
                   {verificationResult.checks.hasPermanentDelegate && <p>• Permanent Delegate Detected</p>}
                   {verificationResult.checks.taxesAreDynamic && <p>• Dynamic Tax Configuration</p>}
+                  {verificationResult.checks.hasBuyback && (
+                    <p>• Buyback Logic Detected ({verificationResult.checks.buybackConfidence} confidence)</p>
+                  )}
+                  {verificationResult.checks.taxRiskLevel && (
+                    <p>• Tax Risk: {verificationResult.checks.taxRiskLevel.toUpperCase()}</p>
+                  )}
                 </div>
               </div>
             )}

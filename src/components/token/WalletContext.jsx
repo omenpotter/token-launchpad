@@ -65,7 +65,7 @@ export function WalletProvider({ children }) {
   const connectBackpack = useCallback(async () => {
     try {
       if (window.backpack) {
-        const result = await web3Service.connectWallet(window.backpack);
+        const result = await web3Service.connectWallet(window.backpack, 'X1Space Launcher');
         setWalletAddress(result.address);
         setWalletConnected(true);
         return { success: true };
@@ -80,7 +80,7 @@ export function WalletProvider({ children }) {
   const connectPhantom = useCallback(async () => {
     try {
       if (window.phantom?.solana) {
-        const result = await web3Service.connectWallet(window.phantom.solana);
+        const result = await web3Service.connectWallet(window.phantom.solana, 'X1Space Launcher');
         setWalletAddress(result.address);
         setWalletConnected(true);
         return { success: true };
