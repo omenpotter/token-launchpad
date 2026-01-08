@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TrendingUp, ArrowDownUp, Coins, Info, Zap, DollarSign } from 'lucide-react';
+import { TrendingUp, ArrowDownUp, Coins, Info, Zap, DollarSign, ExternalLink } from 'lucide-react';
 
 export default function TradeTab({ createdTokens, walletConnected, currency }) {
   const [fromToken, setFromToken] = useState('native');
@@ -7,8 +7,8 @@ export default function TradeTab({ createdTokens, walletConnected, currency }) {
   const [fromAmount, setFromAmount] = useState(0);
   const [slippage, setSlippage] = useState(1);
 
-  // Filter tokens that have liquidity
-  const tokensWithLiquidity = createdTokens.filter(token => token.hasLiquidity);
+  // Show all tokens (in real app they would need liquidity)
+  const tokensWithLiquidity = createdTokens;
 
   const calculateToAmount = () => {
     if (!fromAmount || !toToken) return 0;
@@ -222,6 +222,19 @@ export default function TradeTab({ createdTokens, walletConnected, currency }) {
             <Zap className="w-5 h-5" />
             {walletConnected ? 'Swap' : 'Connect Wallet'}
           </button>
+
+          {/* xDEX Link */}
+          <div className="text-center pt-2">
+            <a
+              href="https://app.xdex.xyz/swap"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm text-cyan-400 hover:text-cyan-300 transition"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Advanced trading on xDEX
+            </a>
+          </div>
         </div>
       </div>
 
