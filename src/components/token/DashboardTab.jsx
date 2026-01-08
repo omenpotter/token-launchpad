@@ -418,6 +418,13 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
           </motion.div>
         ))}
       </div>
+
+      <SendToMintingModal
+        isOpen={!!showSendToMinting}
+        onClose={() => setShowSendToMinting(null)}
+        token={showSendToMinting}
+        onConfirm={(settings) => handleSendToMinting(showSendToMinting, settings)}
+      />
     </div>
   );
 }
