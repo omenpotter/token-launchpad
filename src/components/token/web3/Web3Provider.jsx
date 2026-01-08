@@ -171,10 +171,16 @@ class SolanaWeb3Service {
         );
       }
 
-      // Send transaction
-      const signature = await this.wallet.sendTransaction(transaction, this.connection, {
-        signers: [mintKeypair]
-      });
+      // Get recent blockhash and set fee payer
+      const { blockhash } = await this.connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = this.publicKey;
+
+      // Sign with mint keypair
+      transaction.partialSign(mintKeypair);
+
+      // Send transaction via wallet
+      const signature = await this.wallet.signAndSendTransaction(transaction);
 
       // Confirm transaction
       await this.connection.confirmTransaction(signature, 'confirmed');
