@@ -1,3 +1,4 @@
+import './web3/polyfills';
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { web3Service } from './web3/Web3Provider';
 

@@ -1,3 +1,4 @@
+import './polyfills';
 import * as web3 from '@solana/web3.js';
 import * as splToken from '@solana/spl-token';
 import { NETWORK_CONFIG, PROGRAM_ADDRESSES, FEE_RECIPIENT_ADDRESS, TOKEN_CREATION_FEE, PRESALE_CREATION_FEE, DIRECT_MINT_FEE } from './contracts';
