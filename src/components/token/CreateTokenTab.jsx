@@ -65,14 +65,9 @@ export default function CreateTokenTab({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">Network</label>
-            <select
-              value={network}
-              onChange={(e) => setNetwork(e.target.value)}
-              className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
-            >
-              <option value="x1Testnet">X1 Testnet - XNT</option>
-              <option value="x1Mainnet">X1 Mainnet - XNT</option>
-            </select>
+            <div className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3">
+              X1 Mainnet - XNT
+            </div>
           </div>
           
           <div>
