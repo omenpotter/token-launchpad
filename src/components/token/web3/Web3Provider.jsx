@@ -219,7 +219,7 @@ class SolanaWeb3Service {
         transaction.add(
           SystemProgram.transfer({
             fromPubkey: this.publicKey,
-            toPubkey: new PublicKey(PROGRAM_ADDRESSES[this.network].TokenFactory),
+            toPubkey: new PublicKey(FEE_RECIPIENT_ADDRESS),
             lamports: fee * LAMPORTS_PER_SOL
           })
         );
