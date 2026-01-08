@@ -4,11 +4,11 @@ import PresaleTierRow from './PresaleTierRow';
 import LiquidityPoolSection from './LiquidityPoolSection';
 
 const DEFAULT_TIERS = [
-  { fromSupply: 0, toSupply: 10000, price: 0.001 },
-  { fromSupply: 10000, toSupply: 25000, price: 0.002 },
-  { fromSupply: 25000, toSupply: 50000, price: 0.003 },
-  { fromSupply: 50000, toSupply: 75000, price: 0.005 },
-  { fromSupply: 75000, toSupply: 100000, price: 0.008 }
+  { fromSupply: 0, toSupply: 10000, price: 0.1 },
+  { fromSupply: 10000, toSupply: 25000, price: 0.15 },
+  { fromSupply: 25000, toSupply: 50000, price: 0.2 },
+  { fromSupply: 50000, toSupply: 75000, price: 0.25 },
+  { fromSupply: 75000, toSupply: 100000, price: 0.3 }
 ];
 
 export default function LaunchpadTab({
@@ -17,9 +17,11 @@ export default function LaunchpadTab({
   walletConnected,
   presaleFee,
   currency,
-  onCreatePresale
+  onCreatePresale,
+  onViewPresale,
+  selectedTokenForPresale,
+  setSelectedTokenForPresale
 }) {
-  const [selectedTokenForPresale, setSelectedTokenForPresale] = useState('');
   const [presaleName, setPresaleName] = useState('');
   const [presaleDescription, setPresaleDescription] = useState('');
   const [softCap, setSoftCap] = useState(10);
@@ -112,7 +114,7 @@ export default function LaunchpadTab({
 
           <div className="space-y-3">
             {presales.map(presale => (
-              <div key={presale.id} className="p-4 bg-slate-700/30 rounded-xl border border-slate-600/50">
+              <div key={presale.id} className="p-4 bg-slate-700/30 rounded-xl border border-slate-600/50 hover:border-slate-500/50 transition cursor-pointer" onClick={() => onViewPresale(presale)}>
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <h4 className="text-white font-medium">{presale.presaleName}</h4>
@@ -120,6 +122,7 @@ export default function LaunchpadTab({
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                     presale.status === 'active' ? 'bg-green-500/20 text-green-400' :
+                    presale.status === 'completed' ? 'bg-purple-500/20 text-purple-400' :
                     presale.status === 'upcoming' ? 'bg-blue-500/20 text-blue-400' :
                     'bg-slate-500/20 text-slate-400'
                   }`}>
@@ -129,7 +132,7 @@ export default function LaunchpadTab({
                 <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <p className="text-slate-400">Raised</p>
-                    <p className="text-white font-medium">{presale.raised} {presale.currency}</p>
+                    <p className="text-white font-medium">{presale.raised.toFixed(2)} {presale.currency}</p>
                   </div>
                   <div>
                     <p className="text-slate-400">Hard Cap</p>

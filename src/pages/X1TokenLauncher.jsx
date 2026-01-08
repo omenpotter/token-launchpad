@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Wallet, Coins, Zap, LayoutDashboard, Rocket, LogOut } from 'lucide-react';
+import { Wallet, Coins, Zap, LayoutDashboard, Rocket, LogOut, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import WalletConnectModal from '../components/token/WalletConnectModal';
@@ -8,6 +8,9 @@ import CreateTokenTab from '../components/token/CreateTokenTab';
 import DirectMintTab from '../components/token/DirectMintTab';
 import DashboardTab from '../components/token/DashboardTab';
 import LaunchpadTab from '../components/token/LaunchpadTab';
+import TradeTab from '../components/token/TradeTab';
+import PresaleDetailModal from '../components/token/PresaleDetailModal';
+import InvestModal from '../components/token/InvestModal';
 
 export default function X1TokenLauncher() {
   // Network & Token
@@ -52,9 +55,9 @@ export default function X1TokenLauncher() {
   const [activeTab, setActiveTab] = useState('create');
 
   // Fees
-  const TOKEN_CREATION_FEE = 0.1;
-  const DIRECT_MINT_FEE = 0.1;
-  const PRESALE_CREATION_FEE = 0.1;
+  const TOKEN_CREATION_FEE = 0.2;
+  const DIRECT_MINT_FEE = 0.2;
+  const PRESALE_CREATION_FEE = 0.2;
 
   const getNativeCurrency = () => {
     return network.includes('x1') ? 'XNT' : 'SOL';
@@ -212,7 +215,27 @@ export default function X1TokenLauncher() {
       // Simulate wallet transaction
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      if (approvalData.type === 'token_creation') {
+      if (approvalData.type === 'presale_investment') {
+        // Handle presale investment
+        const updatedPresales = presales.map(p => {
+          if (p.id === selectedPresale.id) {
+            return {
+              ...p,
+              raised: p.raised + investAmount,
+              investors: p.investors + 1,
+              status: p.raised + investAmount >= p.hardCap ? 'completed' : 
+                      p.raised + investAmount >= p.softCap ? 'active' : p.status
+            };
+          }
+          return p;
+        });
+        setPresales(updatedPresales);
+        setSelectedPresale(null);
+        setInvestAmount(0);
+        
+        alert(`✅ Investment successful!\nAmount: ${investAmount} ${getNativeCurrency()}`);
+      }
+      else if (approvalData.type === 'token_creation') {
         const mockMint = Math.random().toString(36).substring(2, 12) + '...';
         
         const newToken = {
@@ -297,8 +320,13 @@ export default function X1TokenLauncher() {
     { id: 'create', label: 'Create Token', icon: Coins },
     { id: 'directmint', label: 'Direct Mint', icon: Zap },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'launchpad', label: 'Launchpad', icon: Rocket }
+    { id: 'launchpad', label: 'Launchpad', icon: Rocket },
+    { id: 'trade', label: 'Trade', icon: TrendingUp }
   ];
+  
+  const [selectedPresale, setSelectedPresale] = useState(null);
+  const [investAmount, setInvestAmount] = useState(0);
+  const [showInvestModal, setShowInvestModal] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
@@ -431,7 +459,21 @@ export default function X1TokenLauncher() {
             )}
 
             {activeTab === 'dashboard' && (
-              <DashboardTab createdTokens={createdTokens} />
+              <DashboardTab 
+                createdTokens={createdTokens} 
+                setCreatedTokens={setCreatedTokens}
+                network={network}
+                onQuickAction={(action, tokenId) => {
+                  if (action === 'mint' || action === 'burn') {
+                    setSelectedTokenForMint(tokenId.toString());
+                    setActiveTab('directmint');
+                  } else if (action === 'presale') {
+                    setSelectedTokenForPresale(tokenId.toString());
+                    setActiveTab('launchpad');
+                  }
+                }}
+                presales={presales}
+              />
             )}
 
             {activeTab === 'launchpad' && (
@@ -442,6 +484,17 @@ export default function X1TokenLauncher() {
                 presaleFee={PRESALE_CREATION_FEE}
                 currency={getNativeCurrency()}
                 onCreatePresale={handleCreatePresale}
+                onViewPresale={(presale) => setSelectedPresale(presale)}
+                selectedTokenForPresale={selectedTokenForPresale}
+                setSelectedTokenForPresale={setSelectedTokenForPresale}
+              />
+            )}
+
+            {activeTab === 'trade' && (
+              <TradeTab
+                createdTokens={createdTokens}
+                walletConnected={walletConnected}
+                currency={getNativeCurrency()}
               />
             )}
           </motion.div>
@@ -465,6 +518,43 @@ export default function X1TokenLauncher() {
         onApprove={handleApproveTransaction}
         isLoading={approvalLoading}
         approvalData={approvalData}
+      />
+
+      <PresaleDetailModal
+        presale={selectedPresale}
+        onClose={() => setSelectedPresale(null)}
+        onInvest={(presale) => {
+          setShowInvestModal(true);
+          setInvestAmount(0);
+        }}
+        walletConnected={walletConnected}
+      />
+
+      <InvestModal
+        isOpen={showInvestModal}
+        onClose={() => {
+          setShowInvestModal(false);
+          setInvestAmount(0);
+        }}
+        presale={selectedPresale}
+        investAmount={investAmount}
+        setInvestAmount={setInvestAmount}
+        currency={getNativeCurrency()}
+        onConfirm={async () => {
+          setApprovalData({
+            type: 'presale_investment',
+            title: 'Invest in Presale',
+            amount: investAmount,
+            currency: getNativeCurrency(),
+            details: {
+              tokenName: selectedPresale.tokenName,
+              tokenSymbol: selectedPresale.tokenSymbol,
+              action: `Invest ${investAmount} ${getNativeCurrency()}`
+            }
+          });
+          setShowInvestModal(false);
+          setShowApprovalModal(true);
+        }}
       />
     </div>
   );

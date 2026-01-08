@@ -61,8 +61,6 @@ export default function CreateTokenTab({
             >
               <option value="x1Testnet">X1 Testnet - XNT</option>
               <option value="x1Mainnet">X1 Mainnet - XNT</option>
-              <option value="solanaTestnet">Solana Testnet - SOL</option>
-              <option value="solanaMainnet">Solana Mainnet - SOL</option>
             </select>
           </div>
           
