@@ -25,14 +25,20 @@ export default function MintingPage() {
 
   const { data: createdTokens = [], refetch: refetchTokens } = useQuery({
     queryKey: ['tokens', walletAddress],
-    queryFn: () => base44.entities.Token.filter({ creator: walletAddress }),
+    queryFn: async () => {
+      const tokens = await base44.entities.Token.filter({ creator: walletAddress });
+      return tokens.filter(t => t.network === 'x1Mainnet');
+    },
     enabled: walletConnected && !!walletAddress,
     initialData: []
   });
 
   const { data: allTokens = [] } = useQuery({
     queryKey: ['allTokens'],
-    queryFn: () => base44.entities.Token.list(),
+    queryFn: async () => {
+      const tokens = await base44.entities.Token.list();
+      return tokens.filter(t => t.network === 'x1Mainnet');
+    },
     initialData: []
   });
 
