@@ -352,6 +352,7 @@ export default function LaunchpadTab({
             pairToken={pairToken}
             setPairToken={setPairToken}
             currency={currency}
+            createdTokens={createdTokens}
           />
 
           {/* Create Button */}
