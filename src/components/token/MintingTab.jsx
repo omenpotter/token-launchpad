@@ -1,6 +1,8 @@
 import React from 'react';
 import { Zap, Flame, AlertCircle, Send, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { base44 } from '@/api/base44Client';
+import { useQuery } from '@tanstack/react-query';
 
 export default function MintingTab({
   createdTokens,
@@ -17,7 +19,14 @@ export default function MintingTab({
   onBurn,
   walletAddress
 }) {
-  const selectedToken = createdTokens.find(t => t.id?.toString() === selectedTokenForMint);
+  // Fetch only tokens sent for minting
+  const { data: mintingTokens = [] } = useQuery({
+    queryKey: ['minting-tokens'],
+    queryFn: () => base44.entities.Token.filter({ sentForMinting: true }),
+    initialData: []
+  });
+
+  const selectedToken = mintingTokens.find(t => t.id?.toString() === selectedTokenForMint);
   
   const getMintProgress = (token) => {
     if (token.lockMint) return 100;
@@ -33,14 +42,14 @@ export default function MintingTab({
     }
   };
 
-  if (createdTokens.length === 0) {
+  if (mintingTokens.length === 0) {
     return (
       <div className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700/50 text-center">
         <div className="w-16 h-16 rounded-2xl bg-slate-700/50 flex items-center justify-center mx-auto mb-4">
           <Zap className="w-8 h-8 text-slate-500" />
         </div>
-        <h3 className="text-xl font-semibold text-white mb-2">No Tokens Available</h3>
-        <p className="text-slate-400">Create a token first to start minting</p>
+        <h3 className="text-xl font-semibold text-white mb-2">No Tokens Available for Minting</h3>
+        <p className="text-slate-400">Token creators must send tokens to the minting page first</p>
       </div>
     );
   }
@@ -51,7 +60,7 @@ export default function MintingTab({
       <div className="bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50">
         <h3 className="text-lg font-semibold text-white mb-4">Available Tokens for Minting</h3>
         <div className="space-y-3">
-          {createdTokens.map((token, index) => {
+          {mintingTokens.map((token, index) => {
             const progress = getMintProgress(token);
             const isComplete = progress === 100;
             

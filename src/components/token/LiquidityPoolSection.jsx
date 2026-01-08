@@ -48,9 +48,23 @@ export default function LiquidityPoolSection({
 
       {createLiquidity && (
         <div className="p-5 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Pair Token</label>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Select Token</label>
+              <select
+                className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition"
+              >
+                <option value="">Choose token...</option>
+                {createdTokens.map(token => (
+                  <option key={token.id} value={token.symbol}>
+                    {token.name} ({token.symbol})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Pair With</label>
               <select
                 value={pairToken}
                 onChange={(e) => setPairToken(e.target.value)}
@@ -84,6 +98,17 @@ export default function LiquidityPoolSection({
                   {currency}
                 </span>
               </div>
+            </div>
+
+            <div className="flex items-end">
+              <a
+                href="https://app.xdex.xyz/liquidity"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full px-4 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl transition font-medium text-center"
+              >
+                Add Liquidity on xDEX
+              </a>
             </div>
           </div>
 

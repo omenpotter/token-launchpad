@@ -438,7 +438,7 @@ export default function X1TokenLauncher() {
                 <Coins className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">X1 Token Launcher</h1>
+                <h1 className="text-xl font-bold text-white">X1Space Launcher</h1>
                 <p className="text-xs text-slate-400">Create, mint & launch tokens</p>
               </div>
             </div>
@@ -473,6 +473,21 @@ export default function X1TokenLauncher() {
       </header>
 
       {/* Main Content */}
+      <nav className="bg-slate-900/50 border-b border-slate-800/50">
+        <div className="max-w-6xl mx-auto px-4 py-2">
+          <div className="flex items-center gap-4 text-sm">
+            <a href="https://xdex.xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition">
+              xDEX
+            </a>
+            <a href="https://t.me/xdex_xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition">
+              Telegram
+            </a>
+            <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition">
+              Twitter
+            </a>
+          </div>
+        </div>
+      </nav>
       <main className="max-w-6xl mx-auto px-4 py-6">
         {/* Tabs */}
         <div className="flex overflow-x-auto gap-2 mb-6 pb-2 scrollbar-hide">
@@ -671,6 +686,28 @@ export default function X1TokenLauncher() {
           setShowApprovalModal(true);
         }}
       />
+
+      {/* Footer */}
+      <footer className="mt-12 border-t border-slate-800/50 bg-slate-900/50">
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="text-center md:text-left">
+              <p className="text-slate-400 text-sm">© 2026 X1Space Launcher. All rights reserved.</p>
+            </div>
+            <div className="flex items-center gap-6">
+              <a href="https://xdex.xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition text-sm">
+                xDEX.xyz
+              </a>
+              <a href="https://t.me/xdex_xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition text-sm">
+                Telegram
+              </a>
+              <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition text-sm">
+                @rkbehelvi
+              </a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

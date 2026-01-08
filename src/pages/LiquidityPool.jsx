@@ -31,14 +31,17 @@ export default function LiquidityPoolPage() {
   }));
 
   const handleAddLiquidity = () => {
+    if (!tokenA || !tokenB || !amountA || !amountB) {
+      alert('Please select both tokens and enter amounts');
+      return;
+    }
     alert(`Adding ${amountA} ${tokenA} + ${amountB} ${tokenB} to pool via xDEX`);
-    // Integration with xDEX would go here
-    window.open('https://app.xdex.xyz/swap', '_blank');
+    window.open('https://app.xdex.xyz/liquidity', '_blank');
   };
 
   const handleRemoveLiquidity = () => {
     alert(`Removing liquidity from ${tokenA}/${tokenB} pool`);
-    window.open('https://app.xdex.xyz/swap', '_blank');
+    window.open('https://app.xdex.xyz/liquidity', '_blank');
   };
 
   return (
@@ -108,7 +111,8 @@ export default function LiquidityPoolPage() {
                           onChange={(e) => setTokenA(e.target.value)}
                           className="flex-1 bg-slate-800 border border-slate-600 text-white rounded-lg px-4 py-3"
                         >
-                          <option value="">Select Token</option>
+                          <option value="">Select Token A</option>
+                          <option value="XNT">XNT (Native)</option>
                           {tokens.map(token => (
                             <option key={token.id} value={token.symbol}>
                               {token.name} ({token.symbol})
@@ -140,6 +144,7 @@ export default function LiquidityPoolPage() {
                           onChange={(e) => setTokenB(e.target.value)}
                           className="flex-1 bg-slate-800 border border-slate-600 text-white rounded-lg px-4 py-3"
                         >
+                          <option value="">Select Token B</option>
                           <option value="XNT">XNT (Native)</option>
                           {tokens.map(token => (
                             <option key={token.id} value={token.symbol}>

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Coins, ExternalLink, Clock, Shield, Copy, CheckCircle, Zap, Flame, Rocket, Eye, Edit2, Lock, Users, TrendingUp, BarChart3, Droplets } from 'lucide-react';
+import { Coins, ExternalLink, Clock, Shield, Copy, CheckCircle, Zap, Flame, Rocket, Eye, Edit2, Lock, Users, TrendingUp, BarChart3, Droplets, Send } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { base44 } from '@/api/base44Client';
 import TokenAnalytics from './TokenAnalytics';
 import LiquidityManagement from './LiquidityManagement';
+import SendToMintingModal from './SendToMintingModal';
 
 export default function DashboardTab({ createdTokens, setCreatedTokens, network, onQuickAction, presales }) {
   const [copiedId, setCopiedId] = useState(null);
@@ -11,6 +13,7 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
   const [editValues, setEditValues] = useState({});
   const [showAnalytics, setShowAnalytics] = useState(null);
   const [showLiquidity, setShowLiquidity] = useState(null);
+  const [showSendToMinting, setShowSendToMinting] = useState(null);
 
   const copyToClipboard = (text, id) => {
     navigator.clipboard.writeText(text);
@@ -56,10 +59,28 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
     return presales.filter(p => {
       const token = createdTokens.find(t => t.id === tokenId);
       return token && p.tokenSymbol === token.symbol;
-    });
-  };
+      });
+      };
 
-  if (createdTokens.length === 0) {
+      const handleSendToMinting = async (token, settings) => {
+      try {
+      await base44.entities.Token.update(token.id, {
+        sentForMinting: true,
+        mintingMaxPerWallet: settings.maxPerWallet,
+        fairMint: settings.enableFairMint
+      });
+
+      const updatedTokens = createdTokens.map(t => 
+        t.id === token.id ? { ...t, sentForMinting: true, mintingMaxPerWallet: settings.maxPerWallet, fairMint: settings.enableFairMint } : t
+      );
+      setCreatedTokens(updatedTokens);
+      alert(`✅ ${token.symbol} sent to Minting Page!`);
+      } catch (error) {
+      alert('Failed to send token: ' + error.message);
+      }
+      };
+
+      if (createdTokens.length === 0) {
     return (
       <div className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700/50 text-center">
         <div className="w-16 h-16 rounded-2xl bg-slate-700/50 flex items-center justify-center mx-auto mb-4">
@@ -158,7 +179,7 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
               </div>
 
               {/* Quick Actions */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
                 <button
                   onClick={() => onQuickAction('mint', token.id)}
                   className="flex items-center justify-center gap-2 px-3 py-2 bg-green-500/10 hover:bg-green-500/20 text-green-400 rounded-lg transition text-sm font-medium"
@@ -172,6 +193,14 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
                 >
                   <Flame className="w-4 h-4" />
                   Burn
+                </button>
+                <button
+                  onClick={() => setShowSendToMinting(token)}
+                  disabled={token.sentForMinting}
+                  className="flex items-center justify-center gap-2 px-3 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 rounded-lg transition text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send className="w-4 h-4" />
+                  {token.sentForMinting ? 'Sent' : 'Minting'}
                 </button>
                 <button
                   onClick={() => onQuickAction('presale', token.id)}
