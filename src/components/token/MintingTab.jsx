@@ -19,10 +19,13 @@ export default function MintingTab({
   onBurn,
   walletAddress
 }) {
-  // Fetch only tokens sent for minting
+  // Fetch only tokens sent for minting on X1 Mainnet
   const { data: mintingTokens = [] } = useQuery({
     queryKey: ['minting-tokens'],
-    queryFn: () => base44.entities.Token.filter({ sentForMinting: true }),
+    queryFn: async () => {
+      const tokens = await base44.entities.Token.filter({ sentForMinting: true });
+      return tokens.filter(t => t.network === 'x1Mainnet');
+    },
     initialData: []
   });
 
