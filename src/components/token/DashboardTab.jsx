@@ -45,15 +45,22 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
     });
   };
 
-  const saveEditing = () => {
-    const updatedTokens = createdTokens.map(t => {
-      if (t.id === editingTokenId) {
-        return { ...t, ...editValues };
-      }
-      return t;
-    });
-    setCreatedTokens(updatedTokens);
-    setEditingTokenId(null);
+  const saveEditing = async () => {
+    try {
+      await base44.entities.Token.update(editingTokenId, editValues);
+      
+      const updatedTokens = createdTokens.map(t => {
+        if (t.id === editingTokenId) {
+          return { ...t, ...editValues };
+        }
+        return t;
+      });
+      setCreatedTokens(updatedTokens);
+      setEditingTokenId(null);
+      alert('✅ Token settings saved successfully!');
+    } catch (error) {
+      alert('Failed to save changes: ' + error.message);
+    }
   };
 
   const getTokenPresales = (tokenId) => {
