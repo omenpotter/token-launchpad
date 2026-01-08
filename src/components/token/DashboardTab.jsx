@@ -3,7 +3,6 @@ import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
 import { Coins, ExternalLink, Clock, Shield, Copy, CheckCircle, Zap, Flame, Rocket, Eye, Edit2, Lock, Users, TrendingUp, BarChart3, Droplets, Send } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { base44 } from '@/api/base44Client';
 import TokenAnalytics from './TokenAnalytics';
 import LiquidityManagement from './LiquidityManagement';
 import SendToMintingModal from './SendToMintingModal';
