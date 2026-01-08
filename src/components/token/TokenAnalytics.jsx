@@ -3,6 +3,7 @@ import { TrendingUp, Users, Activity, Droplets, ArrowUpRight, ArrowDownRight } f
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 export default function TokenAnalytics({ token }) {
+  const [timeframe, setTimeframe] = useState('24h');
   // Mock data for demonstration
   const priceHistory = [
     { time: '00:00', price: 0.08 },

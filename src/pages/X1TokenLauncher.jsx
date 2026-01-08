@@ -496,13 +496,11 @@ export default function X1TokenLauncher() {
             <a href="https://xdex.xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition">
               xDEX
             </a>
-            <a href="https://t.me/xdex_xyz" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-slate-400 hover:text-cyan-400 transition">
-              <MessageCircle className="w-4 h-4" />
-              Telegram
+            <a href="https://t.me/xdex_xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition" title="Telegram">
+              <MessageCircle className="w-5 h-5" />
             </a>
-            <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-slate-400 hover:text-cyan-400 transition">
-              <Twitter className="w-4 h-4" />
-              Twitter
+            <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition" title="Twitter">
+              <Twitter className="w-5 h-5" />
             </a>
           </div>
         </div>

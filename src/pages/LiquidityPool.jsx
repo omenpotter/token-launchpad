@@ -1,6 +1,6 @@
 import '../components/token/web3/polyfills';
 import React, { useState, useEffect } from 'react';
-import { Droplets, Wallet, LogOut, Coins, MessageCircle, Twitter } from 'lucide-react';
+import { Droplets, Wallet, LogOut, Coins, MessageCircle, Twitter, Lock, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
@@ -10,12 +10,13 @@ import WalletConnectModal from '../components/token/WalletConnectModal';
 export default function LiquidityPoolPage() {
   const [selectedToken, setSelectedToken] = useState('');
   const [pairToken, setPairToken] = useState('native');
-  const [liquidityAmount, setLiquidityAmount] = useState(10);
+  const [liquidityAmount, setLiquidityAmount] = useState('0.1');
   const [liquidityLockPeriod, setLiquidityLockPeriod] = useState(180);
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [createLiquidity, setCreateLiquidity] = useState(true);
 
   const { data: tokens = [] } = useQuery({
     queryKey: ['tokens'],
@@ -83,13 +84,13 @@ export default function LiquidityPoolPage() {
       const result = await web3Service.addLiquidity(
         'x1Testnet',
         token.mint,
-        liquidityAmount,
-        liquidityAmount,
+        parseFloat(liquidityAmount),
+        parseFloat(liquidityAmount),
         token.decimals
       );
       
-      alert(`✅ Liquidity added successfully!\nTx: ${result.txHash}\nLocked for ${liquidityLockPeriod} days`);
-      setLiquidityAmount(10);
+      alert(`✅ Liquidity added successfully!\nTx: ${result.txHash}\nLocked for ${liquidityLockPeriod === 999999 ? 'forever' : `${liquidityLockPeriod} days`}`);
+      setLiquidityAmount('0.1');
     } catch (error) {
       alert('Failed to add liquidity: ' + error.message);
     } finally {
@@ -101,7 +102,7 @@ export default function LiquidityPoolPage() {
     { value: 0, label: 'No Lock' },
     { value: 30, label: '30 Days' },
     { value: 90, label: '90 Days' },
-    { value: 180, label: '180 Days' },
+    { value: 180, label: '6 Months' },
     { value: 365, label: '1 Year' },
     { value: 730, label: '2 Years' },
     { value: 999999, label: 'Forever' }
@@ -159,13 +160,11 @@ export default function LiquidityPoolPage() {
             <a href="https://xdex.xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition">
               xDEX
             </a>
-            <a href="https://t.me/xdex_xyz" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-slate-400 hover:text-cyan-400 transition">
-              <MessageCircle className="w-4 h-4" />
-              Telegram
+            <a href="https://t.me/xdex_xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition" title="Telegram">
+              <MessageCircle className="w-5 h-5" />
             </a>
-            <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-slate-400 hover:text-cyan-400 transition">
-              <Twitter className="w-4 h-4" />
-              Twitter
+            <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition" title="Twitter">
+              <Twitter className="w-5 h-5" />
             </a>
           </div>
         </div>
@@ -189,110 +188,139 @@ export default function LiquidityPoolPage() {
           </div>
         </div>
 
-        {/* Liquidity Pool */}
-        <div className="bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-              <Droplets className="w-5 h-5 text-cyan-400" />
+        {/* Liquidity Pool Section */}
+        <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-700/50 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                <Droplets className="w-5 h-5 text-cyan-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white">Liquidity Pool</h3>
+                <p className="text-xs text-slate-400">Create and lock liquidity for your token</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-white">Liquidity Pool</h3>
-              <p className="text-xs text-slate-400">Create and lock liquidity for your tokens</p>
-            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={createLiquidity}
+                onChange={(e) => setCreateLiquidity(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
+            </label>
           </div>
 
-          <div className="p-5 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Select Token</label>
-                <select
-                  value={selectedToken}
-                  onChange={(e) => setSelectedToken(e.target.value)}
-                  className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition"
-                >
-                  <option value="">Choose token...</option>
-                  {tokens.map(token => (
-                    <option key={token.id} value={token.id}>
-                      {token.name} ({token.symbol})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Pair With</label>
-                <select
-                  value={pairToken}
-                  onChange={(e) => setPairToken(e.target.value)}
-                  className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition"
-                >
-                  <option value="native">XNT (Native)</option>
-                  {tokens.map(token => (
-                    <option key={token.id} value={token.symbol}>
-                      {token.name} ({token.symbol})
-                    </option>
-                  ))}
-                  <option value="usdc">USDC</option>
-                  <option value="usdt">USDT</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">XNT Amount for Liquidity</label>
-                <input
-                  type="number"
-                  value={liquidityAmount}
-                  onChange={(e) => setLiquidityAmount(Number(e.target.value))}
-                  min={0}
-                  step={0.1}
-                  className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Lock Period</label>
-              <div className="grid grid-cols-3 md:grid-cols-7 gap-2">
-                {lockPeriodOptions.map(option => (
-                  <button
-                    key={option.value}
-                    onClick={() => setLiquidityLockPeriod(option.value)}
-                    className={`px-4 py-2 rounded-lg font-medium transition ${
-                      liquidityLockPeriod === option.value
-                        ? 'bg-cyan-500 text-white'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
+          {createLiquidity && (
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Select Token</label>
+                  <select
+                    value={selectedToken}
+                    onChange={(e) => setSelectedToken(e.target.value)}
+                    className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition"
                   >
-                    {option.label}
+                    <option value="">Choose token...</option>
+                    {tokens.map(token => (
+                      <option key={token.id} value={token.id}>
+                        {token.name} ({token.symbol})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Pair With</label>
+                  <select
+                    value={pairToken}
+                    onChange={(e) => setPairToken(e.target.value)}
+                    className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition"
+                  >
+                    <option value="native">XNT (Native)</option>
+                    {tokens.map(token => (
+                      <option key={token.id} value={token.symbol}>
+                        {token.name} ({token.symbol})
+                      </option>
+                    ))}
+                    <option value="usdc">USDC</option>
+                    <option value="usdt">USDT</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">XNT Amount for Liquidity</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={liquidityAmount}
+                      onChange={(e) => setLiquidityAmount(e.target.value)}
+                      step="0.1"
+                      placeholder="0.1"
+                      className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 pr-16 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">XNT</span>
+                  </div>
+                </div>
+
+                <div className="flex items-end">
+                  <button
+                    onClick={handleAddLiquidity}
+                    disabled={!walletConnected || !selectedToken || isLoading}
+                    className="w-full px-4 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed text-white rounded-xl transition font-medium"
+                  >
+                    {isLoading ? 'Adding...' : 'Add Liquidity on xDEX'}
                   </button>
-                ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-amber-400" />
+                  Lock Period
+                </label>
+                <div className="grid grid-cols-3 md:grid-cols-7 gap-2">
+                  {lockPeriodOptions.map((period) => (
+                    <button
+                      key={period.value}
+                      onClick={() => setLiquidityLockPeriod(period.value)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
+                        liquidityLockPeriod === period.value
+                          ? 'bg-cyan-500 text-white'
+                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      }`}
+                    >
+                      {period.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {liquidityLockPeriod > 0 && (
+                <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
+                  <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-amber-300 font-medium">Liquidity will be locked</p>
+                    <p className="text-xs text-amber-400/70 mt-1">
+                      {liquidityLockPeriod === 999999
+                        ? 'Liquidity will be permanently locked and cannot be withdrawn.'
+                        : `You won't be able to remove liquidity for ${liquidityLockPeriod} days after creation.`
+                      }
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-start gap-3 bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
+                <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm text-blue-300">
+                    A portion of your token supply will be paired with XNT to create the initial liquidity pool.
+                  </p>
+                </div>
               </div>
             </div>
-
-            {liquidityLockPeriod > 0 && (
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
-                <p className="text-amber-300 text-sm flex items-center gap-2">
-                  <span className="text-lg">⚠️</span>
-                  Liquidity will be locked - You won't be able to remove liquidity for {liquidityLockPeriod === 999999 ? 'forever' : `${liquidityLockPeriod} days`} after creation.
-                </p>
-              </div>
-            )}
-
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
-              <p className="text-blue-300 text-sm flex items-center gap-2">
-                <span className="text-lg">ℹ️</span>
-                A portion of your token supply will be paired with XNT to create the initial liquidity pool.
-              </p>
-            </div>
-
-            <button
-              onClick={handleAddLiquidity}
-              disabled={!walletConnected || !selectedToken || isLoading}
-              className="w-full px-4 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed text-white rounded-xl transition font-medium"
-            >
-              {isLoading ? 'Adding Liquidity...' : walletConnected ? 'Add Liquidity' : 'Connect Wallet First'}
-            </button>
-          </div>
+          )}
         </div>
       </main>
 
@@ -307,10 +335,10 @@ export default function LiquidityPoolPage() {
               <a href="https://xdex.xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition text-sm">
                 xDEX.xyz
               </a>
-              <a href="https://t.me/xdex_xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition">
+              <a href="https://t.me/xdex_xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition" title="Telegram">
                 <MessageCircle className="w-5 h-5" />
               </a>
-              <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition">
+              <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition" title="Twitter">
                 <Twitter className="w-5 h-5" />
               </a>
             </div>
