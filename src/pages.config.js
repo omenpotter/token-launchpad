@@ -1,21 +1,21 @@
 import CreateToken from './pages/CreateToken';
-import LiquidityPool from './pages/LiquidityPool';
-import X1TokenLauncher from './pages/X1TokenLauncher';
-import Minting from './pages/Minting';
 import Dashboard from './pages/Dashboard';
 import Launchpad from './pages/Launchpad';
+import LiquidityPool from './pages/LiquidityPool';
+import Minting from './pages/Minting';
 import Trade from './pages/Trade';
+import X1TokenLauncher from './pages/X1TokenLauncher';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "CreateToken": CreateToken,
-    "LiquidityPool": LiquidityPool,
-    "X1TokenLauncher": X1TokenLauncher,
-    "Minting": Minting,
     "Dashboard": Dashboard,
     "Launchpad": Launchpad,
+    "LiquidityPool": LiquidityPool,
+    "Minting": Minting,
     "Trade": Trade,
+    "X1TokenLauncher": X1TokenLauncher,
 }
 
 export const pagesConfig = {

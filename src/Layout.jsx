@@ -1,6 +1,6 @@
+import './components/token/web3/polyfills';
 import React from 'react';
 import { WalletProvider } from './components/token/WalletContext';
-import './components/token/web3/polyfills';
 
 export default function Layout({ children, currentPageName }) {
   return (
