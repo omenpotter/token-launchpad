@@ -91,29 +91,53 @@ export default function X1TokenLauncher() {
 
   const connectBackpack = async () => {
     try {
-      // For X1 networks, use MetaMask/Web3 wallets
-      const result = await web3Service.connectWallet();
-      await web3Service.switchNetwork(network);
-      setWalletAddress(result.address);
-      setWalletConnected(true);
-      setShowWalletModal(false);
+      // Check for Backpack Ethereum provider
+      if (window.backpack && window.backpack.ethereum) {
+        // Temporarily set ethereum provider to Backpack
+        const originalProvider = window.ethereum;
+        window.ethereum = window.backpack.ethereum;
+        
+        const result = await web3Service.connectWallet();
+        await web3Service.switchNetwork(network);
+        
+        window.ethereum = originalProvider; // Restore
+        
+        setWalletAddress(result.address);
+        setWalletConnected(true);
+        setShowWalletModal(false);
+      } else {
+        alert('Backpack wallet not found. Please install Backpack from https://backpack.app');
+      }
     } catch (error) {
-      console.error('Wallet connection error:', error);
-      alert('Failed to connect wallet: ' + error.message);
+      console.error('Backpack connection error:', error);
+      alert('Failed to connect Backpack: ' + error.message);
     }
   };
 
   const connectPhantom = async () => {
     try {
-      // For X1 networks, use MetaMask/Web3 wallets
-      const result = await web3Service.connectWallet();
-      await web3Service.switchNetwork(network);
-      setWalletAddress(result.address);
-      setWalletConnected(true);
-      setShowWalletModal(false);
+      // Check for Phantom Ethereum provider
+      if (window.phantom && window.phantom.ethereum) {
+        // Temporarily set ethereum provider to Phantom
+        const originalProvider = window.ethereum;
+        window.ethereum = window.phantom.ethereum;
+        
+        const result = await web3Service.connectWallet();
+        await web3Service.switchNetwork(network);
+        
+        window.ethereum = originalProvider; // Restore
+        
+        setWalletAddress(result.address);
+        setWalletConnected(true);
+        setShowWalletModal(false);
+      } else if (window.solana && window.solana.isPhantom) {
+        alert('Phantom detected but X1 requires Ethereum support. Please enable Ethereum network in Phantom.');
+      } else {
+        alert('Phantom wallet not found. Please install Phantom from https://phantom.app');
+      }
     } catch (error) {
-      console.error('Wallet connection error:', error);
-      alert('Failed to connect wallet: ' + error.message);
+      console.error('Phantom connection error:', error);
+      alert('Failed to connect Phantom: ' + error.message);
     }
   };
 
