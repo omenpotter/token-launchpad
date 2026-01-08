@@ -20,9 +20,9 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
 
   const getExplorerUrl = (mint, tokenNetwork) => {
     if (tokenNetwork === 'x1Testnet') {
-      return `https://explorer.testnet.x1.xyz/token/${mint}`;
+      return `https://explorer.testnet.x1.xyz/address/${mint}`;
     } else if (tokenNetwork === 'x1Mainnet') {
-      return `https://explorer.mainnet.x1.xyz/token/${mint}`;
+      return `https://explorer.mainnet.x1.xyz/address/${mint}`;
     }
     return '#';
   };

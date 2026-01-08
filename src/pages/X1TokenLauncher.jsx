@@ -1,12 +1,14 @@
 import '../components/token/web3/polyfills';
 import React, { useState, useEffect } from 'react';
-import { Wallet, Coins, Zap, LayoutDashboard, Rocket, LogOut, TrendingUp } from 'lucide-react';
+import { Wallet, Coins, Zap, LayoutDashboard, Rocket, LogOut, TrendingUp, Droplets, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { base44 } from '@/api/base44Client';
+import { useQuery } from '@tanstack/react-query';
 
 import WalletConnectModal from '../components/token/WalletConnectModal';
 import WalletApprovalModal from '../components/token/WalletApprovalModal';
 import CreateTokenTab from '../components/token/CreateTokenTab';
-import DirectMintTab from '../components/token/DirectMintTab';
+import MintingTab from '../components/token/MintingTab';
 import DashboardTab from '../components/token/DashboardTab';
 import LaunchpadTab from '../components/token/LaunchpadTab';
 import TradeTab from '../components/token/TradeTab';
@@ -47,6 +49,20 @@ export default function X1TokenLauncher() {
   // Data
   const [createdTokens, setCreatedTokens] = useState([]);
   const [presales, setPresales] = useState([]);
+
+  // Fetch tokens from database when wallet connects
+  const { data: dbTokens = [], refetch: refetchTokens } = useQuery({
+    queryKey: ['tokens', walletAddress],
+    queryFn: () => base44.entities.Token.filter({ creator: walletAddress }),
+    enabled: walletConnected && !!walletAddress,
+    initialData: []
+  });
+
+  useEffect(() => {
+    if (dbTokens.length > 0) {
+      setCreatedTokens(dbTokens);
+    }
+  }, [dbTokens]);
   
   // Direct Mint
   const [selectedTokenForMint, setSelectedTokenForMint] = useState('');
@@ -258,29 +274,30 @@ export default function X1TokenLauncher() {
         );
         
         const newToken = {
-          id: Date.now(),
           name: tokenName,
           symbol: tokenSymbol,
           mint: result.tokenAddress,
           type: tokenType,
           decimals: decimals,
           supply: supply,
+          initialSupply: supply,
           network,
           logo: tokenLogo,
           website: tokenWebsite,
           description: tokenDescription,
           lockMint: lockMintAuthority,
-          whitelist: whitelistEnabled,
           fairMint: fairMintEnabled,
           maxPerWallet: fairMintEnabled ? maxPerWallet : 0,
           immutable: immutableToken,
           totalMinted: 0,
           burned: 0,
-          timestamp: new Date().toLocaleString(),
-          txHash: result.txHash
+          txHash: result.txHash,
+          creator: walletAddress
         };
         
-        setCreatedTokens([newToken, ...createdTokens]);
+        // Save to database
+        await base44.entities.Token.create(newToken);
+        await refetchTokens();
         
         // Reset form
         setTokenName('');
@@ -314,17 +331,14 @@ export default function X1TokenLauncher() {
           DIRECT_MINT_FEE
         );
         
-        const updatedTokens = createdTokens.map(t => {
-          if (t.id === parseInt(selectedTokenForMint)) {
-            return { 
-              ...t, 
-              totalMinted: (t.totalMinted || 0) + mintAmount,
-              supply: t.supply + mintAmount
-            };
-          }
-          return t;
-        });
-        setCreatedTokens(updatedTokens);
+        const updatedToken = {
+          ...token,
+          totalMinted: (token.totalMinted || 0) + mintAmount,
+          supply: token.supply + mintAmount
+        };
+        
+        await base44.entities.Token.update(token.id, updatedToken);
+        await refetchTokens();
         setMintAmount(100);
         
         alert(`✅ Minted ${mintAmount} tokens on-chain!\nTx: ${result.txHash}`);
@@ -406,9 +420,10 @@ export default function X1TokenLauncher() {
 
   const tabs = [
     { id: 'create', label: 'Create Token', icon: Coins },
-    { id: 'directmint', label: 'Direct Mint', icon: Zap },
+    { id: 'minting', label: 'Minting', icon: Zap },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'launchpad', label: 'Launchpad', icon: Rocket },
+    { id: 'liquidity', label: 'Liquidity Pool', icon: Droplets },
     { id: 'trade', label: 'Trade', icon: TrendingUp }
   ];
 
@@ -525,8 +540,8 @@ export default function X1TokenLauncher() {
               />
             )}
 
-            {activeTab === 'directmint' && (
-              <DirectMintTab
+            {activeTab === 'minting' && (
+              <MintingTab
                 createdTokens={createdTokens}
                 selectedTokenForMint={selectedTokenForMint}
                 setSelectedTokenForMint={setSelectedTokenForMint}
@@ -539,6 +554,7 @@ export default function X1TokenLauncher() {
                 currency={getNativeCurrency()}
                 onMint={handleDirectMint}
                 onBurn={handleBurn}
+                walletAddress={walletAddress}
               />
             )}
 
@@ -550,7 +566,7 @@ export default function X1TokenLauncher() {
                 onQuickAction={(action, tokenId) => {
                   if (action === 'mint' || action === 'burn') {
                     setSelectedTokenForMint(tokenId.toString());
-                    setActiveTab('directmint');
+                    setActiveTab('minting');
                   } else if (action === 'presale') {
                     setSelectedTokenForPresale(tokenId.toString());
                     setActiveTab('launchpad');
@@ -572,6 +588,21 @@ export default function X1TokenLauncher() {
                 selectedTokenForPresale={selectedTokenForPresale}
                 setSelectedTokenForPresale={setSelectedTokenForPresale}
               />
+            )}
+
+            {activeTab === 'liquidity' && (
+              <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50 text-center">
+                <Droplets className="w-12 h-12 text-cyan-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-white mb-2">Liquidity Pool Management</h3>
+                <p className="text-slate-400 mb-4">Visit our dedicated Liquidity Pool page to manage your pools</p>
+                <a 
+                  href="/liquidity-pool" 
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl transition"
+                >
+                  <Droplets className="w-4 h-4" />
+                  Go to Liquidity Pool
+                </a>
+              </div>
             )}
 
             {activeTab === 'trade' && (
