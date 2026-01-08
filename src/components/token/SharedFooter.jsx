@@ -1,5 +1,8 @@
 import React from 'react';
 
+const TELEGRAM_ICON = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/3166166d8_Telegram_2019_Logosvg1.jpg";
+const TWITTER_ICON = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/2e2eecb01_31AGs2bX7mL.png";
+
 export default function SharedFooter() {
   return (
     <footer className="mt-12 border-t border-slate-800/50 bg-slate-900/50">
@@ -13,10 +16,10 @@ export default function SharedFooter() {
               xDEX.xyz
             </a>
             <a href="https://t.me/xdex_xyz" target="_blank" rel="noopener noreferrer" title="Telegram">
-              <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/3166166d8_Telegram_2019_Logosvg1.jpg" alt="Telegram" className="w-5 h-5 rounded-full hover:opacity-80 transition" />
+              <img src={TELEGRAM_ICON} alt="Telegram" className="w-5 h-5 rounded-full hover:opacity-80 transition" />
             </a>
             <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" title="X">
-              <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/2e2eecb01_31AGs2bX7mL.png" alt="X" className="w-5 h-5 hover:opacity-80 transition" />
+              <img src={TWITTER_ICON} alt="X" className="w-5 h-5 hover:opacity-80 transition" />
             </a>
           </div>
         </div>
