@@ -30,18 +30,69 @@ export default function LiquidityPoolPage() {
     apr: (Math.random() * 150).toFixed(2)
   }));
 
-  const handleAddLiquidity = () => {
+  const handleAddLiquidity = async () => {
     if (!tokenA || !tokenB || !amountA || !amountB) {
       alert('Please select both tokens and enter amounts');
       return;
     }
-    alert(`Adding ${amountA} ${tokenA} + ${amountB} ${tokenB} to pool via xDEX`);
-    window.open('https://app.xdex.xyz/liquidity', '_blank');
+    if (!walletConnected) {
+      alert('Please connect wallet first');
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      const result = await web3Service.addLiquidity(
+        'x1Testnet',
+        tokenA === 'XNT' ? null : tokens.find(t => t.symbol === tokenA)?.mint,
+        parseFloat(amountA),
+        parseFloat(amountB),
+        9
+      );
+      
+      alert(`✅ Liquidity added successfully!\nTx: ${result.txHash}`);
+      setAmountA('');
+      setAmountB('');
+    } catch (error) {
+      alert('Failed to add liquidity: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleRemoveLiquidity = () => {
-    alert(`Removing liquidity from ${tokenA}/${tokenB} pool`);
-    window.open('https://app.xdex.xyz/liquidity', '_blank');
+  const handleRemoveLiquidity = async () => {
+    if (!walletConnected) {
+      alert('Please connect wallet first');
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      alert(`Removing ${removePercentage}% liquidity from ${tokenA}/${tokenB} pool`);
+      setRemovePercentage(50);
+    } catch (error) {
+      alert('Failed to remove liquidity: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const connectWallet = async () => {
+    try {
+      if (window.phantom?.solana) {
+        const result = await web3Service.connectWallet(window.phantom.solana);
+        setWalletAddress(result.address);
+        setWalletConnected(true);
+      } else if (window.backpack) {
+        const result = await web3Service.connectWallet(window.backpack);
+        setWalletAddress(result.address);
+        setWalletConnected(true);
+      } else {
+        alert('Please install Phantom or Backpack wallet');
+      }
+    } catch (error) {
+      alert('Failed to connect wallet: ' + error.message);
+    }
   };
 
   return (

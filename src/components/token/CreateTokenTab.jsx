@@ -1,5 +1,5 @@
 import React from 'react';
-import { Coins, Shield, Globe, Image, Lock, Users, Zap, Info } from 'lucide-react';
+import { Coins, Shield, Globe, Image, Lock, Users, Zap, Info, MessageCircle, Twitter as TwitterIcon, Calendar } from 'lucide-react';
 import AIDescriptionGenerator from './AIDescriptionGenerator';
 
 export default function CreateTokenTab({
@@ -19,8 +19,18 @@ export default function CreateTokenTab({
   setTokenLogo,
   tokenWebsite,
   setTokenWebsite,
+  tokenTelegram,
+  setTokenTelegram,
+  tokenTwitter,
+  setTokenTwitter,
   tokenDescription,
   setTokenDescription,
+  lockEnabled,
+  setLockEnabled,
+  lockDuration,
+  setLockDuration,
+  lockReleaseDate,
+  setLockReleaseDate,
   lockMintAuthority,
   setLockMintAuthority,
   whitelistEnabled,
@@ -172,15 +182,46 @@ export default function CreateTokenTab({
               className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Website</label>
-            <input
-              type="url"
-              value={tokenWebsite}
-              onChange={(e) => setTokenWebsite(e.target.value)}
-              placeholder="https://..."
-              className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+                <Globe className="w-4 h-4" />
+                Website
+              </label>
+              <input
+                type="url"
+                value={tokenWebsite}
+                onChange={(e) => setTokenWebsite(e.target.value)}
+                placeholder="https://yourtoken.com"
+                className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+                <MessageCircle className="w-4 h-4" />
+                Telegram
+              </label>
+              <input
+                type="url"
+                value={tokenTelegram}
+                onChange={(e) => setTokenTelegram(e.target.value)}
+                placeholder="https://t.me/yourtoken"
+                className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+                <TwitterIcon className="w-4 h-4" />
+                Twitter/X
+              </label>
+              <input
+                type="url"
+                value={tokenTwitter}
+                onChange={(e) => setTokenTwitter(e.target.value)}
+                placeholder="https://x.com/yourtoken"
+                className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
+              />
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">Description</label>
@@ -259,6 +300,48 @@ export default function CreateTokenTab({
                   onChange={(e) => setMaxPerWallet(Number(e.target.value))}
                   className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
                 />
+              </div>
+            )}
+          </div>
+
+          <div className="p-4 bg-slate-700/30 rounded-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Lock className="w-5 h-5 text-slate-400" />
+                <div>
+                  <p className="text-white font-medium">Token Lock</p>
+                  <p className="text-xs text-slate-400">Lock tokens for a specific duration</p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={lockEnabled} onChange={(e) => setLockEnabled(e.target.checked)} className="sr-only peer" />
+                <div className="w-11 h-6 bg-slate-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+              </label>
+            </div>
+            {lockEnabled && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-slate-400 mb-2">Lock Duration (Days)</label>
+                  <input
+                    type="number"
+                    value={lockDuration}
+                    onChange={(e) => setLockDuration(Number(e.target.value))}
+                    min={1}
+                    className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-400 mb-2 flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Release Date
+                  </label>
+                  <input
+                    type="date"
+                    value={lockReleaseDate}
+                    onChange={(e) => setLockReleaseDate(e.target.value)}
+                    className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
+                  />
+                </div>
               </div>
             )}
           </div>
