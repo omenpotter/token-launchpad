@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Wallet, Coins, Zap, LayoutDashboard, Rocket, LogOut, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -11,6 +11,7 @@ import LaunchpadTab from '../components/token/LaunchpadTab';
 import TradeTab from '../components/token/TradeTab';
 import PresaleDetailModal from '../components/token/PresaleDetailModal';
 import InvestModal from '../components/token/InvestModal';
+import { web3Service } from '../components/token/web3/Web3Provider';
 
 export default function X1TokenLauncher() {
   // Network & Token
@@ -69,39 +70,55 @@ export default function X1TokenLauncher() {
     return network.includes('x1') ? 'XNT' : 'SOL';
   };
 
+  // Initialize Web3 wallet connection
+  useEffect(() => {
+    const checkWallet = async () => {
+      if (window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          if (accounts.length > 0) {
+            const result = await web3Service.connectWallet();
+            setWalletAddress(result.address);
+            setWalletConnected(true);
+          }
+        } catch (error) {
+          console.error('Error checking wallet:', error);
+        }
+      }
+    };
+    checkWallet();
+  }, []);
+
   const connectBackpack = async () => {
     try {
-      const backpack = window.backpack || window.backpackSolana;
-      if (backpack) {
-        const response = await backpack.connect();
-        setWalletAddress(response.publicKey.toString());
-        setWalletConnected(true);
-        setShowWalletModal(false);
-      } else {
-        alert('Backpack wallet not installed. Download from https://backpack.app');
-      }
+      // For X1 networks, use MetaMask/Web3 wallets
+      const result = await web3Service.connectWallet();
+      await web3Service.switchNetwork(network);
+      setWalletAddress(result.address);
+      setWalletConnected(true);
+      setShowWalletModal(false);
     } catch (error) {
-      console.error('Backpack connection error:', error);
-      alert('Failed to connect Backpack wallet');
+      console.error('Wallet connection error:', error);
+      alert('Failed to connect wallet: ' + error.message);
     }
   };
 
   const connectPhantom = async () => {
     try {
-      if (window.solana && window.solana.isPhantom) {
-        const response = await window.solana.connect();
-        setWalletAddress(response.publicKey.toString());
-        setWalletConnected(true);
-        setShowWalletModal(false);
-      } else {
-        alert('Phantom wallet not installed. Download from https://phantom.app');
-      }
+      // For X1 networks, use MetaMask/Web3 wallets
+      const result = await web3Service.connectWallet();
+      await web3Service.switchNetwork(network);
+      setWalletAddress(result.address);
+      setWalletConnected(true);
+      setShowWalletModal(false);
     } catch (error) {
-      alert('Failed to connect Phantom wallet');
+      console.error('Wallet connection error:', error);
+      alert('Failed to connect wallet: ' + error.message);
     }
   };
 
   const disconnectWallet = () => {
+    web3Service.disconnect();
     setWalletConnected(false);
     setWalletAddress('');
   };
@@ -163,7 +180,7 @@ export default function X1TokenLauncher() {
   };
 
   // Burn Tokens
-  const handleBurn = () => {
+  const handleBurn = async () => {
     if (!walletConnected) {
       alert('Please connect wallet first');
       return;
@@ -176,16 +193,31 @@ export default function X1TokenLauncher() {
     const token = createdTokens.find(t => t.id === parseInt(selectedTokenForMint));
     if (!token) return;
 
-    // Burning is free, just update the token
-    const updatedTokens = createdTokens.map(t => {
-      if (t.id === parseInt(selectedTokenForMint)) {
-        return { ...t, burned: (t.burned || 0) + burnAmount };
-      }
-      return t;
-    });
-    setCreatedTokens(updatedTokens);
-    setBurnAmount(0);
-    alert(`Successfully burned ${burnAmount} ${token.symbol} tokens!`);
+    try {
+      // Real burn on blockchain
+      const result = await web3Service.burnTokens(
+        token.mint,
+        burnAmount,
+        token.decimals
+      );
+      
+      const updatedTokens = createdTokens.map(t => {
+        if (t.id === parseInt(selectedTokenForMint)) {
+          return { 
+            ...t, 
+            burned: (t.burned || 0) + burnAmount,
+            supply: t.supply - burnAmount
+          };
+        }
+        return t;
+      });
+      setCreatedTokens(updatedTokens);
+      setBurnAmount(0);
+      
+      alert(`✅ Burned ${burnAmount} ${token.symbol} tokens on-chain!\nTx: ${result.txHash}`);
+    } catch (error) {
+      alert('Burn failed: ' + error.message);
+    }
   };
 
   // Create Presale
@@ -213,16 +245,106 @@ export default function X1TokenLauncher() {
     setShowApprovalModal(true);
   };
 
-  // Approve Transaction
+  // Approve Transaction - Real Blockchain Integration
   const handleApproveTransaction = async () => {
     setApprovalLoading(true);
     
     try {
-      // Simulate wallet transaction
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      if (approvalData.type === 'presale_investment') {
-        // Handle presale investment
+      if (approvalData.type === 'token_creation') {
+        // Real token creation on X1 blockchain
+        const result = await web3Service.createToken(
+          network,
+          {
+            name: tokenName,
+            symbol: tokenSymbol,
+            decimals: decimals,
+            supply: supply,
+            lockMint: lockMintAuthority,
+            immutable: immutableToken,
+            maxPerWallet: fairMintEnabled ? maxPerWallet : 0
+          },
+          TOKEN_CREATION_FEE
+        );
+        
+        const newToken = {
+          id: Date.now(),
+          name: tokenName,
+          symbol: tokenSymbol,
+          mint: result.tokenAddress,
+          type: tokenType,
+          decimals: decimals,
+          supply: supply,
+          network,
+          logo: tokenLogo,
+          website: tokenWebsite,
+          description: tokenDescription,
+          lockMint: lockMintAuthority,
+          whitelist: whitelistEnabled,
+          fairMint: fairMintEnabled,
+          maxPerWallet: fairMintEnabled ? maxPerWallet : 0,
+          immutable: immutableToken,
+          totalMinted: 0,
+          burned: 0,
+          timestamp: new Date().toLocaleString(),
+          txHash: result.txHash
+        };
+        
+        setCreatedTokens([newToken, ...createdTokens]);
+        
+        // Reset form
+        setTokenName('');
+        setTokenSymbol('');
+        setTokenLogo('');
+        setTokenWebsite('');
+        setTokenDescription('');
+        setLockMintAuthority(false);
+        setWhitelistAddresses('');
+        setWhitelistEnabled(false);
+        setFairMintEnabled(false);
+        setImmutableToken(false);
+        
+        alert(`✅ Token created on-chain!\nAddress: ${result.tokenAddress}\nTx: ${result.txHash}`);
+      } 
+      else if (approvalData.type === 'direct_mint') {
+        const token = createdTokens.find(t => t.id === parseInt(selectedTokenForMint));
+        
+        // Check fair mint limit
+        if (token.fairMint && token.maxPerWallet > 0) {
+          const totalMintedByUser = (token.totalMinted || 0) + mintAmount;
+          if (totalMintedByUser > token.maxPerWallet) {
+            throw new Error(`Fair mint limit exceeded. Max per wallet: ${token.maxPerWallet}`);
+          }
+        }
+        
+        const result = await web3Service.mintTokens(
+          token.mint,
+          mintAmount,
+          token.decimals,
+          DIRECT_MINT_FEE
+        );
+        
+        const updatedTokens = createdTokens.map(t => {
+          if (t.id === parseInt(selectedTokenForMint)) {
+            return { 
+              ...t, 
+              totalMinted: (t.totalMinted || 0) + mintAmount,
+              supply: t.supply + mintAmount
+            };
+          }
+          return t;
+        });
+        setCreatedTokens(updatedTokens);
+        setMintAmount(100);
+        
+        alert(`✅ Minted ${mintAmount} tokens on-chain!\nTx: ${result.txHash}`);
+      }
+      else if (approvalData.type === 'presale_investment') {
+        // Real presale investment
+        const result = await web3Service.investInPresale(
+          selectedPresale.presaleAddress || '0x1234567890123456789012345678901234567890',
+          investAmount
+        );
+        
         const updatedPresales = presales.map(p => {
           if (p.id === selectedPresale.id) {
             return {
@@ -239,64 +361,30 @@ export default function X1TokenLauncher() {
         setSelectedPresale(null);
         setInvestAmount(0);
         
-        alert(`✅ Investment successful!\nAmount: ${investAmount} ${getNativeCurrency()}`);
-      }
-      else if (approvalData.type === 'token_creation') {
-        const mockMint = Math.random().toString(36).substring(2, 12) + '...';
-        
-        const newToken = {
-          id: Date.now(),
-          name: approvalData.details.tokenName,
-          symbol: approvalData.details.tokenSymbol,
-          mint: mockMint,
-          type: approvalData.details.tokenType,
-          decimals: approvalData.details.decimals,
-          supply: approvalData.details.supply,
-          network,
-          logo: tokenLogo,
-          website: tokenWebsite,
-          description: tokenDescription,
-          lockMint: lockMintAuthority,
-          whitelist: whitelistEnabled,
-          fairMint: fairMintEnabled,
-          immutable: immutableToken,
-          totalMinted: 0,
-          burned: 0,
-          timestamp: new Date().toLocaleString()
-        };
-        
-        setCreatedTokens([newToken, ...createdTokens]);
-        setTokenName('');
-        setTokenSymbol('');
-        setTokenLogo('');
-        setTokenWebsite('');
-        setTokenDescription('');
-        setLockMintAuthority(false);
-        setWhitelistAddresses('');
-        setWhitelistEnabled(false);
-        setFairMintEnabled(false);
-        setImmutableToken(false);
-        
-        alert(`✅ Token created successfully!\nMint: ${mockMint}\nFee: ${approvalData.amount} ${approvalData.currency}`);
-      } 
-      else if (approvalData.type === 'direct_mint') {
-        const updatedTokens = createdTokens.map(t => {
-          if (t.id === parseInt(selectedTokenForMint)) {
-            return { ...t, totalMinted: (t.totalMinted || 0) + mintAmount };
-          }
-          return t;
-        });
-        setCreatedTokens(updatedTokens);
-        setMintAmount(100);
-        
-        alert(`✅ Successfully minted ${approvalData.details.mintAmount} tokens!\nFee: ${approvalData.amount} ${approvalData.currency}`);
+        alert(`✅ Investment successful!\nAmount: ${investAmount} ${getNativeCurrency()}\nTx: ${result.txHash}`);
       }
       else if (approvalData.type === 'presale_creation') {
         const { presaleData } = approvalData;
+        const token = presaleData.token;
+        
+        const result = await web3Service.createPresale(
+          network,
+          {
+            tokenAddress: token.mint,
+            softCap: presaleData.softCap,
+            hardCap: presaleData.hardCap,
+            startDate: presaleData.startDate,
+            endDate: presaleData.endDate,
+            minContribution: presaleData.minContribution,
+            maxContribution: presaleData.maxContribution
+          },
+          PRESALE_CREATION_FEE
+        );
+        
         const newPresale = {
           id: Date.now(),
-          tokenName: presaleData.token.name,
-          tokenSymbol: presaleData.token.symbol,
+          tokenName: token.name,
+          tokenSymbol: token.symbol,
           presaleName: presaleData.name,
           presaleDescription: presaleData.description,
           softCap: presaleData.softCap,
@@ -307,13 +395,16 @@ export default function X1TokenLauncher() {
           status: 'upcoming',
           raised: 0,
           investors: 0,
-          createdAt: new Date().toLocaleString()
+          createdAt: new Date().toLocaleString(),
+          presaleAddress: result.presaleAddress,
+          txHash: result.txHash
         };
         
         setPresales([newPresale, ...presales]);
-        alert(`✅ Presale created successfully!\nFee: ${approvalData.amount} ${approvalData.currency}`);
+        alert(`✅ Presale created on-chain!\nAddress: ${result.presaleAddress}\nTx: ${result.txHash}`);
       }
     } catch (error) {
+      console.error('Transaction error:', error);
       alert('Transaction failed: ' + error.message);
     } finally {
       setApprovalLoading(false);
