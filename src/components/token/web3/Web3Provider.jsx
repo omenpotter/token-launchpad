@@ -41,7 +41,7 @@ class SolanaWeb3Service {
   }
 
   // Connect wallet (for Phantom, Backpack, etc.)
-  async connectWallet(walletAdapter) {
+  async connectWallet(walletAdapter, appName = 'X1Space Launcher') {
     try {
       if (!walletAdapter) {
         throw new Error('No wallet adapter provided');
@@ -52,7 +52,15 @@ class SolanaWeb3Service {
 
       // Connect if not already connected
       if (!walletAdapter.connected) {
-        await walletAdapter.connect();
+        // Try to pass app name for branding
+        const connectOptions = {};
+        
+        // Some wallets support app name/metadata
+        if (walletAdapter.isBackpack) {
+          connectOptions.appName = appName;
+        }
+        
+        await walletAdapter.connect(connectOptions);
       }
 
       this.publicKey = walletAdapter.publicKey;
