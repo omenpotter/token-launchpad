@@ -1,28 +1,45 @@
-import React from 'react';
-import { TrendingUp, Users, Activity, Droplets, ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import React, { useState } from 'react';
+import { TrendingUp, Users, Activity, Droplets, ArrowUpRight, ArrowDownRight, BarChart3, Target } from 'lucide-react';
+import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from 'recharts';
 
 export default function TokenAnalytics({ token }) {
   const [timeframe, setTimeframe] = useState('24h');
-  // Mock data for demonstration
-  const priceHistory = [
-    { time: '00:00', price: 0.08 },
-    { time: '04:00', price: 0.09 },
-    { time: '08:00', price: 0.12 },
-    { time: '12:00', price: 0.11 },
-    { time: '16:00', price: 0.15 },
-    { time: '20:00', price: 0.14 },
-    { time: '24:00', price: 0.16 }
-  ];
+  
+  // Mock data - timeframe dependent
+  const priceHistoryData = {
+    '24h': [
+      { time: '00:00', price: 0.08, volume: 500 },
+      { time: '04:00', price: 0.09, volume: 800 },
+      { time: '08:00', price: 0.12, volume: 1200 },
+      { time: '12:00', price: 0.11, volume: 900 },
+      { time: '16:00', price: 0.15, volume: 1500 },
+      { time: '20:00', price: 0.14, volume: 1100 },
+      { time: '24:00', price: 0.16, volume: 1300 }
+    ],
+    '7d': [
+      { time: 'Mon', price: 0.08, volume: 4500 },
+      { time: 'Tue', price: 0.10, volume: 5200 },
+      { time: 'Wed', price: 0.12, volume: 6100 },
+      { time: 'Thu', price: 0.14, volume: 5800 },
+      { time: 'Fri', price: 0.15, volume: 7200 },
+      { time: 'Sat', price: 0.14, volume: 4800 },
+      { time: 'Sun', price: 0.16, volume: 5500 }
+    ],
+    '30d': [
+      { time: 'Week 1', price: 0.05, volume: 18000 },
+      { time: 'Week 2', price: 0.08, volume: 22000 },
+      { time: 'Week 3', price: 0.12, volume: 28000 },
+      { time: 'Week 4', price: 0.16, volume: 32000 }
+    ]
+  };
 
-  const volumeData = [
-    { time: '00:00', volume: 500 },
-    { time: '04:00', volume: 800 },
-    { time: '08:00', volume: 1200 },
-    { time: '12:00', volume: 900 },
-    { time: '16:00', volume: 1500 },
-    { time: '20:00', volume: 1100 },
-    { time: '24:00', volume: 1300 }
+  const priceHistory = priceHistoryData[timeframe];
+
+  // Market comparison data
+  const marketComparison = [
+    { name: token.symbol, value: 100, change: 15.5, color: '#06b6d4' },
+    { name: 'Market Avg', value: 55, change: 8.2, color: '#8b5cf6' },
+    { name: 'XNT', value: 35, change: 5.1, color: '#f59e0b' }
   ];
 
   const holdersDistribution = [
@@ -42,6 +59,25 @@ export default function TokenAnalytics({ token }) {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="text-white font-semibold">Token Analytics</h4>
+        <div className="flex gap-2">
+          {['24h', '7d', '30d'].map(tf => (
+            <button
+              key={tf}
+              onClick={() => setTimeframe(tf)}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
+                timeframe === tf
+                  ? 'bg-cyan-500 text-white'
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              }`}
+            >
+              {tf}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Key Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
@@ -77,7 +113,7 @@ export default function TokenAnalytics({ token }) {
         <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
           <div className="flex items-center gap-2 mb-2">
             <Activity className="w-4 h-4 text-green-400" />
-            <span className="text-xs text-slate-400">24h Volume</span>
+            <span className="text-xs text-slate-400">{timeframe} Volume</span>
           </div>
           <p className="text-2xl font-bold text-white mb-1">$8.2K</p>
           <span className="text-xs text-green-400 flex items-center gap-1">
@@ -89,7 +125,7 @@ export default function TokenAnalytics({ token }) {
 
       {/* Price Chart */}
       <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
-        <h4 className="text-white font-semibold mb-4">Price History (24h)</h4>
+        <h4 className="text-white font-semibold mb-4">Price History ({timeframe})</h4>
         <ResponsiveContainer width="100%" height={200}>
           <AreaChart data={priceHistory}>
             <defs>
@@ -98,6 +134,7 @@ export default function TokenAnalytics({ token }) {
                 <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
               </linearGradient>
             </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
             <XAxis dataKey="time" stroke="#64748b" style={{ fontSize: '12px' }} />
             <YAxis stroke="#64748b" style={{ fontSize: '12px' }} />
             <Tooltip 
@@ -109,26 +146,68 @@ export default function TokenAnalytics({ token }) {
         </ResponsiveContainer>
       </div>
 
-      {/* Volume Chart & Holders */}
+      {/* Volume Chart & Market Performance */}
       <div className="grid md:grid-cols-2 gap-4">
         <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
-          <h4 className="text-white font-semibold mb-4">Trading Volume (24h)</h4>
+          <h4 className="text-white font-semibold mb-4 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" />
+            Trading Volume ({timeframe})
+          </h4>
           <ResponsiveContainer width="100%" height={180}>
-            <LineChart data={volumeData}>
+            <BarChart data={priceHistory}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
               <XAxis dataKey="time" stroke="#64748b" style={{ fontSize: '12px' }} />
               <YAxis stroke="#64748b" style={{ fontSize: '12px' }} />
               <Tooltip 
                 contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
                 labelStyle={{ color: '#cbd5e1' }}
               />
-              <Line type="monotone" dataKey="volume" stroke="#06b6d4" strokeWidth={2} dot={false} />
-            </LineChart>
+              <Bar dataKey="volume" fill="#06b6d4" radius={[8, 8, 0, 0]} />
+            </BarChart>
           </ResponsiveContainer>
         </div>
 
         <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
-          <h4 className="text-white font-semibold mb-4">Holders Distribution</h4>
-          <div className="flex items-center justify-center h-[180px]">
+          <h4 className="text-white font-semibold mb-4 flex items-center gap-2">
+            <Target className="w-4 h-4" />
+            Performance vs Market
+          </h4>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={marketComparison} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+              <XAxis type="number" stroke="#64748b" style={{ fontSize: '12px' }} />
+              <YAxis dataKey="name" type="category" stroke="#64748b" style={{ fontSize: '12px' }} width={70} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
+                labelStyle={{ color: '#cbd5e1' }}
+                formatter={(value) => [value, 'Index']}
+              />
+              <Bar dataKey="value" radius={[0, 8, 8, 0]}>
+                {marketComparison.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            {marketComparison.map((item, idx) => (
+              <div key={idx} className="text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
+                  <span className="text-xs text-slate-400">{item.name}</span>
+                </div>
+                <p className="text-sm font-semibold text-white">+{item.change}%</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Holders Distribution */}
+      <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
+        <h4 className="text-white font-semibold mb-4">Holders Distribution</h4>
+        <div className="flex items-center gap-8">
+          <div className="w-48 h-48">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -150,14 +229,14 @@ export default function TokenAnalytics({ token }) {
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="space-y-2 mt-3">
+          <div className="flex-1 space-y-3">
             {holdersDistribution.map((item, index) => (
-              <div key={index} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                  <span className="text-slate-400">{item.name}</span>
+              <div key={index} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: item.color }}></div>
+                  <span className="text-slate-300">{item.name}</span>
                 </div>
-                <span className="text-white font-medium">{item.value}%</span>
+                <span className="text-white font-semibold">{item.value}%</span>
               </div>
             ))}
           </div>
