@@ -337,7 +337,11 @@ class SolanaWeb3Service {
         })
       );
 
-      const signature = await this.wallet.sendTransaction(transaction, this.connection);
+      const { blockhash } = await this.connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = this.publicKey;
+
+      const signature = await this.wallet.signAndSendTransaction(transaction);
       await this.connection.confirmTransaction(signature, 'confirmed');
 
       return {
