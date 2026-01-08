@@ -5,6 +5,7 @@ import LiquidityPool from './pages/LiquidityPool';
 import Minting from './pages/Minting';
 import Trade from './pages/Trade';
 import X1TokenLauncher from './pages/X1TokenLauncher';
+import Home from './pages/Home';
 import __Layout from './Layout.jsx';
 
 
@@ -16,6 +17,7 @@ export const PAGES = {
     "Minting": Minting,
     "Trade": Trade,
     "X1TokenLauncher": X1TokenLauncher,
+    "Home": Home,
 }
 
 export const pagesConfig = {
