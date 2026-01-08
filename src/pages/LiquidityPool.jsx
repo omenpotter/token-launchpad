@@ -1,9 +1,11 @@
 import '../components/token/web3/polyfills';
 import React, { useState, useEffect } from 'react';
-import { Droplets, Wallet, LogOut, Coins, MessageCircle, Twitter, Lock, AlertCircle } from 'lucide-react';
+import { Droplets, Wallet, LogOut, Coins, Lock, AlertCircle, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import { web3Service } from '../components/token/web3/Web3Provider';
 import WalletConnectModal from '../components/token/WalletConnectModal';
 
@@ -114,14 +116,19 @@ export default function LiquidityPoolPage() {
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-slate-900/80 border-b border-slate-800/50">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <Coins className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-white">X1Space Launcher</h1>
-                <p className="text-xs text-slate-400">Create, mint & launch tokens</p>
-              </div>
+            <div className="flex items-center gap-4">
+              <Link to={createPageUrl('X1TokenLauncher')} className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 hover:bg-slate-800 rounded-xl transition border border-slate-700/50">
+                <ArrowLeft className="w-4 h-4 text-slate-400" />
+              </Link>
+              <Link to={createPageUrl('X1TokenLauncher')} className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                  <Coins className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-white">X1Space Launcher</h1>
+                  <p className="text-xs text-slate-400">Create, mint & launch tokens</p>
+                </div>
+              </Link>
             </div>
 
             {walletConnected ? (

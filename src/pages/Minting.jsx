@@ -1,6 +1,6 @@
 import '../components/token/web3/polyfills';
-import React, { useState } from 'react';
-import { Wallet, Coins, LogOut, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Wallet, Coins, LogOut, ArrowLeft, Zap, Flame, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
@@ -8,43 +8,37 @@ import { createPageUrl } from '@/utils';
 import { web3Service } from '../components/token/web3/Web3Provider';
 import WalletConnectModal from '../components/token/WalletConnectModal';
 import WalletApprovalModal from '../components/token/WalletApprovalModal';
-import CreateTokenTab from '../components/token/CreateTokenTab';
+import MintingTab from '../components/token/MintingTab';
 
-export default function CreateTokenPage() {
-  const [network, setNetwork] = useState('x1Testnet');
-  const [tokenType, setTokenType] = useState('SPL');
-  const [tokenName, setTokenName] = useState('');
-  const [tokenSymbol, setTokenSymbol] = useState('');
-  const [decimals, setDecimals] = useState(9);
-  const [supply, setSupply] = useState(1000000);
-  const [tokenLogo, setTokenLogo] = useState('');
-  const [tokenWebsite, setTokenWebsite] = useState('');
-  const [tokenTelegram, setTokenTelegram] = useState('');
-  const [tokenTwitter, setTokenTwitter] = useState('');
-  const [tokenDescription, setTokenDescription] = useState('');
-  const [lockEnabled, setLockEnabled] = useState(false);
-  const [lockDuration, setLockDuration] = useState(30);
-  const [lockReleaseDate, setLockReleaseDate] = useState('');
-  const [lockMintAuthority, setLockMintAuthority] = useState(false);
-  const [whitelistEnabled, setWhitelistEnabled] = useState(false);
-  const [whitelistAddresses, setWhitelistAddresses] = useState('');
-  const [fairMintEnabled, setFairMintEnabled] = useState(false);
-  const [maxPerWallet, setMaxPerWallet] = useState(1000);
-  const [immutableToken, setImmutableToken] = useState(false);
+export default function MintingPage() {
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [approvalData, setApprovalData] = useState(null);
   const [approvalLoading, setApprovalLoading] = useState(false);
+  const [selectedTokenForMint, setSelectedTokenForMint] = useState('');
+  const [mintAmount, setMintAmount] = useState(100);
+  const [burnAmount, setBurnAmount] = useState(0);
 
-  const TOKEN_CREATION_FEE = 0.2;
+  const DIRECT_MINT_FEE = 0.2;
 
-  const { refetch: refetchTokens } = useQuery({
-    queryKey: ['tokens'],
-    queryFn: () => base44.entities.Token.list(),
-    enabled: false
+  const { data: createdTokens = [], refetch: refetchTokens } = useQuery({
+    queryKey: ['tokens', walletAddress],
+    queryFn: () => base44.entities.Token.filter({ creator: walletAddress }),
+    enabled: walletConnected && !!walletAddress,
+    initialData: []
   });
+
+  const { data: allTokens = [] } = useQuery({
+    queryKey: ['allTokens'],
+    queryFn: () => base44.entities.Token.list(),
+    initialData: []
+  });
+
+  useEffect(() => {
+    web3Service.initConnection('x1Testnet');
+  }, []);
 
   const connectBackpack = async () => {
     try {
@@ -82,86 +76,77 @@ export default function CreateTokenPage() {
     setWalletAddress('');
   };
 
-  const handleCreateToken = () => {
-    if (!walletConnected) {
-      alert('Please connect wallet first');
-      return;
-    }
-    if (!tokenName || !tokenSymbol) {
-      alert('Please fill in name and symbol');
+  const handleDirectMint = () => {
+    if (!walletConnected || !selectedTokenForMint || !mintAmount) {
+      alert('Please connect wallet and select token');
       return;
     }
 
+    const token = createdTokens.find(t => t.id === parseInt(selectedTokenForMint));
+    if (!token) return;
+
     setApprovalData({
-      type: 'token_creation',
-      title: 'Create Token',
-      amount: TOKEN_CREATION_FEE,
+      type: 'direct_mint',
+      title: 'Mint Tokens',
+      amount: DIRECT_MINT_FEE,
       currency: 'XNT',
-      details: { tokenName, tokenSymbol, tokenType, supply, decimals }
+      details: {
+        tokenName: token.name,
+        tokenSymbol: token.symbol,
+        mintAmount,
+        action: 'Mint new tokens'
+      }
     });
     setShowApprovalModal(true);
+  };
+
+  const handleBurn = async () => {
+    if (!walletConnected || !selectedTokenForMint || !burnAmount) {
+      alert('Please connect wallet and select token');
+      return;
+    }
+
+    const token = createdTokens.find(t => t.id === parseInt(selectedTokenForMint));
+    if (!token) return;
+
+    try {
+      const result = await web3Service.burnTokens(token.mint, burnAmount, token.decimals);
+      
+      await base44.entities.Token.update(token.id, {
+        burned: (token.burned || 0) + burnAmount,
+        supply: token.supply - burnAmount
+      });
+      
+      await refetchTokens();
+      setBurnAmount(0);
+      alert(`✅ Burned ${burnAmount} ${token.symbol} tokens!\nTx: ${result.txHash}`);
+    } catch (error) {
+      alert('Burn failed: ' + error.message);
+    }
   };
 
   const handleApproveTransaction = async () => {
     setApprovalLoading(true);
     try {
-      const result = await web3Service.createToken(network, {
-        name: tokenName,
-        symbol: tokenSymbol,
-        decimals: decimals,
-        supply: supply,
-        lockMint: lockMintAuthority,
-        immutable: immutableToken,
-        maxPerWallet: fairMintEnabled ? maxPerWallet : 0
-      }, TOKEN_CREATION_FEE);
-
-      const newToken = {
-        name: tokenName,
-        symbol: tokenSymbol,
-        mint: result.tokenAddress,
-        type: tokenType,
-        decimals: decimals,
-        supply: supply,
-        initialSupply: supply,
-        network,
-        logo: tokenLogo,
-        website: tokenWebsite,
-        telegram: tokenTelegram,
-        twitter: tokenTwitter,
-        description: tokenDescription,
-        lockMint: lockMintAuthority,
-        fairMint: fairMintEnabled,
-        maxPerWallet: fairMintEnabled ? maxPerWallet : 0,
-        immutable: immutableToken,
-        lockEnabled: lockEnabled,
-        lockDuration: lockDuration,
-        lockReleaseDate: lockReleaseDate,
-        totalMinted: 0,
-        burned: 0,
-        txHash: result.txHash,
-        creator: walletAddress
-      };
-
-      await base44.entities.Token.create(newToken);
+      const token = createdTokens.find(t => t.id === parseInt(selectedTokenForMint));
+      
+      if (token.fairMint && token.maxPerWallet > 0) {
+        const totalMintedByUser = (token.totalMinted || 0) + mintAmount;
+        if (totalMintedByUser > token.maxPerWallet) {
+          throw new Error(`Fair mint limit exceeded. Max per wallet: ${token.maxPerWallet}`);
+        }
+      }
+      
+      const result = await web3Service.mintTokens(token.mint, mintAmount, token.decimals, DIRECT_MINT_FEE);
+      
+      await base44.entities.Token.update(token.id, {
+        totalMinted: (token.totalMinted || 0) + mintAmount,
+        supply: token.supply + mintAmount
+      });
+      
       await refetchTokens();
-
-      setTokenName('');
-      setTokenSymbol('');
-      setTokenLogo('');
-      setTokenWebsite('');
-      setTokenTelegram('');
-      setTokenTwitter('');
-      setTokenDescription('');
-      setLockMintAuthority(false);
-      setWhitelistAddresses('');
-      setWhitelistEnabled(false);
-      setFairMintEnabled(false);
-      setImmutableToken(false);
-      setLockEnabled(false);
-      setLockDuration(30);
-      setLockReleaseDate('');
-
-      alert(`✅ Token created!\nAddress: ${result.tokenAddress}\nTx: ${result.txHash}`);
+      setMintAmount(100);
+      alert(`✅ Minted ${mintAmount} tokens!\nTx: ${result.txHash}`);
     } catch (error) {
       alert('Transaction failed: ' + error.message);
     } finally {
@@ -170,6 +155,10 @@ export default function CreateTokenPage() {
       setApprovalData(null);
     }
   };
+
+  const fairMintTokens = allTokens.filter(t => t.sentForMinting && t.fairMint);
+  const presaleTokens = allTokens.filter(t => t.sentForMinting);
+  const totalTokens = allTokens.length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
@@ -229,52 +218,63 @@ export default function CreateTokenPage() {
       </nav>
 
       <main className="max-w-6xl mx-auto px-4 py-6">
-        <CreateTokenTab
-          network={network}
-          setNetwork={setNetwork}
-          tokenType={tokenType}
-          setTokenType={setTokenType}
-          tokenName={tokenName}
-          setTokenName={setTokenName}
-          tokenSymbol={tokenSymbol}
-          setTokenSymbol={setTokenSymbol}
-          decimals={decimals}
-          setDecimals={setDecimals}
-          supply={supply}
-          setSupply={setSupply}
-          tokenLogo={tokenLogo}
-          setTokenLogo={setTokenLogo}
-          tokenWebsite={tokenWebsite}
-          setTokenWebsite={setTokenWebsite}
-          tokenTelegram={tokenTelegram}
-          setTokenTelegram={setTokenTelegram}
-          tokenTwitter={tokenTwitter}
-          setTokenTwitter={setTokenTwitter}
-          tokenDescription={tokenDescription}
-          setTokenDescription={setTokenDescription}
-          lockEnabled={lockEnabled}
-          setLockEnabled={setLockEnabled}
-          lockDuration={lockDuration}
-          setLockDuration={setLockDuration}
-          lockReleaseDate={lockReleaseDate}
-          setLockReleaseDate={setLockReleaseDate}
-          lockMintAuthority={lockMintAuthority}
-          setLockMintAuthority={setLockMintAuthority}
-          whitelistEnabled={whitelistEnabled}
-          setWhitelistEnabled={setWhitelistEnabled}
-          whitelistAddresses={whitelistAddresses}
-          setWhitelistAddresses={setWhitelistAddresses}
-          fairMintEnabled={fairMintEnabled}
-          setFairMintEnabled={setFairMintEnabled}
-          maxPerWallet={maxPerWallet}
-          setMaxPerWallet={setMaxPerWallet}
-          immutableToken={immutableToken}
-          setImmutableToken={setImmutableToken}
+        <MintingTab
+          createdTokens={createdTokens}
+          selectedTokenForMint={selectedTokenForMint}
+          setSelectedTokenForMint={setSelectedTokenForMint}
+          mintAmount={mintAmount}
+          setMintAmount={setMintAmount}
+          burnAmount={burnAmount}
+          setBurnAmount={setBurnAmount}
           walletConnected={walletConnected}
-          creationFee={TOKEN_CREATION_FEE}
+          mintFee={DIRECT_MINT_FEE}
           currency="XNT"
-          onCreateToken={handleCreateToken}
+          onMint={handleDirectMint}
+          onBurn={handleBurn}
+          walletAddress={walletAddress}
         />
+
+        {/* Analytics Section */}
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-purple-400" />
+              </div>
+              <div>
+                <p className="text-sm text-slate-400">Fair Mint Tokens</p>
+                <p className="text-2xl font-bold text-white">{fairMintTokens.length}</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500">Tokens with fair minting enabled</p>
+          </div>
+
+          <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-sm text-slate-400">Presale Tokens</p>
+                <p className="text-2xl font-bold text-white">{presaleTokens.length}</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500">Tokens available for public minting</p>
+          </div>
+
+          <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
+                <Coins className="w-5 h-5 text-green-400" />
+              </div>
+              <div>
+                <p className="text-sm text-slate-400">Total Tokens</p>
+                <p className="text-2xl font-bold text-white">{totalTokens}</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500">All tokens created on platform</p>
+          </div>
+        </div>
       </main>
 
       <footer className="mt-12 border-t border-slate-800/50 bg-slate-900/50">

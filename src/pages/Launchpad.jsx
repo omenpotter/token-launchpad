@@ -1,5 +1,5 @@
 import '../components/token/web3/polyfills';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Wallet, Coins, LogOut, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
@@ -8,43 +8,35 @@ import { createPageUrl } from '@/utils';
 import { web3Service } from '../components/token/web3/Web3Provider';
 import WalletConnectModal from '../components/token/WalletConnectModal';
 import WalletApprovalModal from '../components/token/WalletApprovalModal';
-import CreateTokenTab from '../components/token/CreateTokenTab';
+import LaunchpadTab from '../components/token/LaunchpadTab';
+import PresaleDetailModal from '../components/token/PresaleDetailModal';
+import InvestModal from '../components/token/InvestModal';
 
-export default function CreateTokenPage() {
-  const [network, setNetwork] = useState('x1Testnet');
-  const [tokenType, setTokenType] = useState('SPL');
-  const [tokenName, setTokenName] = useState('');
-  const [tokenSymbol, setTokenSymbol] = useState('');
-  const [decimals, setDecimals] = useState(9);
-  const [supply, setSupply] = useState(1000000);
-  const [tokenLogo, setTokenLogo] = useState('');
-  const [tokenWebsite, setTokenWebsite] = useState('');
-  const [tokenTelegram, setTokenTelegram] = useState('');
-  const [tokenTwitter, setTokenTwitter] = useState('');
-  const [tokenDescription, setTokenDescription] = useState('');
-  const [lockEnabled, setLockEnabled] = useState(false);
-  const [lockDuration, setLockDuration] = useState(30);
-  const [lockReleaseDate, setLockReleaseDate] = useState('');
-  const [lockMintAuthority, setLockMintAuthority] = useState(false);
-  const [whitelistEnabled, setWhitelistEnabled] = useState(false);
-  const [whitelistAddresses, setWhitelistAddresses] = useState('');
-  const [fairMintEnabled, setFairMintEnabled] = useState(false);
-  const [maxPerWallet, setMaxPerWallet] = useState(1000);
-  const [immutableToken, setImmutableToken] = useState(false);
+export default function LaunchpadPage() {
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [approvalData, setApprovalData] = useState(null);
   const [approvalLoading, setApprovalLoading] = useState(false);
+  const [presales, setPresales] = useState([]);
+  const [selectedPresale, setSelectedPresale] = useState(null);
+  const [showInvestModal, setShowInvestModal] = useState(false);
+  const [investAmount, setInvestAmount] = useState(0);
+  const [selectedTokenForPresale, setSelectedTokenForPresale] = useState('');
 
-  const TOKEN_CREATION_FEE = 0.2;
+  const PRESALE_CREATION_FEE = 0.2;
 
-  const { refetch: refetchTokens } = useQuery({
-    queryKey: ['tokens'],
-    queryFn: () => base44.entities.Token.list(),
-    enabled: false
+  const { data: createdTokens = [] } = useQuery({
+    queryKey: ['tokens', walletAddress],
+    queryFn: () => base44.entities.Token.filter({ creator: walletAddress }),
+    enabled: walletConnected && !!walletAddress,
+    initialData: []
   });
+
+  useEffect(() => {
+    web3Service.initConnection('x1Testnet');
+  }, []);
 
   const connectBackpack = async () => {
     try {
@@ -82,22 +74,26 @@ export default function CreateTokenPage() {
     setWalletAddress('');
   };
 
-  const handleCreateToken = () => {
+  const handleCreatePresale = (presaleData) => {
     if (!walletConnected) {
       alert('Please connect wallet first');
       return;
     }
-    if (!tokenName || !tokenSymbol) {
-      alert('Please fill in name and symbol');
-      return;
-    }
+
+    const token = createdTokens.find(t => t.id === parseInt(presaleData.tokenId));
+    if (!token) return;
 
     setApprovalData({
-      type: 'token_creation',
-      title: 'Create Token',
-      amount: TOKEN_CREATION_FEE,
+      type: 'presale_creation',
+      title: 'Create Presale',
+      amount: PRESALE_CREATION_FEE,
       currency: 'XNT',
-      details: { tokenName, tokenSymbol, tokenType, supply, decimals }
+      details: {
+        tokenName: token.name,
+        tokenSymbol: token.symbol,
+        action: `Create presale: ${presaleData.name}`
+      },
+      presaleData: { ...presaleData, token }
     });
     setShowApprovalModal(true);
   };
@@ -105,63 +101,65 @@ export default function CreateTokenPage() {
   const handleApproveTransaction = async () => {
     setApprovalLoading(true);
     try {
-      const result = await web3Service.createToken(network, {
-        name: tokenName,
-        symbol: tokenSymbol,
-        decimals: decimals,
-        supply: supply,
-        lockMint: lockMintAuthority,
-        immutable: immutableToken,
-        maxPerWallet: fairMintEnabled ? maxPerWallet : 0
-      }, TOKEN_CREATION_FEE);
+      if (approvalData.type === 'presale_creation') {
+        const { presaleData } = approvalData;
+        const token = presaleData.token;
 
-      const newToken = {
-        name: tokenName,
-        symbol: tokenSymbol,
-        mint: result.tokenAddress,
-        type: tokenType,
-        decimals: decimals,
-        supply: supply,
-        initialSupply: supply,
-        network,
-        logo: tokenLogo,
-        website: tokenWebsite,
-        telegram: tokenTelegram,
-        twitter: tokenTwitter,
-        description: tokenDescription,
-        lockMint: lockMintAuthority,
-        fairMint: fairMintEnabled,
-        maxPerWallet: fairMintEnabled ? maxPerWallet : 0,
-        immutable: immutableToken,
-        lockEnabled: lockEnabled,
-        lockDuration: lockDuration,
-        lockReleaseDate: lockReleaseDate,
-        totalMinted: 0,
-        burned: 0,
-        txHash: result.txHash,
-        creator: walletAddress
-      };
+        const result = await web3Service.createPresale('x1Testnet', {
+          tokenAddress: token.mint,
+          softCap: presaleData.softCap,
+          hardCap: presaleData.hardCap,
+          startDate: presaleData.startDate,
+          endDate: presaleData.endDate,
+          minContribution: presaleData.minContribution,
+          maxContribution: presaleData.maxContribution
+        }, PRESALE_CREATION_FEE);
 
-      await base44.entities.Token.create(newToken);
-      await refetchTokens();
+        const newPresale = {
+          id: Date.now(),
+          tokenName: token.name,
+          tokenSymbol: token.symbol,
+          presaleName: presaleData.name,
+          presaleDescription: presaleData.description,
+          softCap: presaleData.softCap,
+          hardCap: presaleData.hardCap,
+          pricingTiers: presaleData.pricingTiers,
+          liquidity: presaleData.liquidity,
+          currency: 'XNT',
+          status: 'upcoming',
+          raised: 0,
+          investors: 0,
+          createdAt: new Date().toLocaleString(),
+          presaleAddress: result.presaleAddress,
+          txHash: result.txHash
+        };
 
-      setTokenName('');
-      setTokenSymbol('');
-      setTokenLogo('');
-      setTokenWebsite('');
-      setTokenTelegram('');
-      setTokenTwitter('');
-      setTokenDescription('');
-      setLockMintAuthority(false);
-      setWhitelistAddresses('');
-      setWhitelistEnabled(false);
-      setFairMintEnabled(false);
-      setImmutableToken(false);
-      setLockEnabled(false);
-      setLockDuration(30);
-      setLockReleaseDate('');
+        setPresales([newPresale, ...presales]);
+        alert(`✅ Presale created!\nAddress: ${result.presaleAddress}\nTx: ${result.txHash}`);
+      } else if (approvalData.type === 'presale_investment') {
+        const result = await web3Service.investInPresale(
+          selectedPresale.presaleAddress || '0x1234567890',
+          investAmount
+        );
 
-      alert(`✅ Token created!\nAddress: ${result.tokenAddress}\nTx: ${result.txHash}`);
+        const updatedPresales = presales.map(p => {
+          if (p.id === selectedPresale.id) {
+            return {
+              ...p,
+              raised: p.raised + investAmount,
+              investors: p.investors + 1,
+              status: p.raised + investAmount >= p.hardCap ? 'completed' : 
+                      p.raised + investAmount >= p.softCap ? 'active' : p.status
+            };
+          }
+          return p;
+        });
+        setPresales(updatedPresales);
+        setSelectedPresale(null);
+        setInvestAmount(0);
+
+        alert(`✅ Investment successful!\nAmount: ${investAmount} XNT\nTx: ${result.txHash}`);
+      }
     } catch (error) {
       alert('Transaction failed: ' + error.message);
     } finally {
@@ -229,51 +227,16 @@ export default function CreateTokenPage() {
       </nav>
 
       <main className="max-w-6xl mx-auto px-4 py-6">
-        <CreateTokenTab
-          network={network}
-          setNetwork={setNetwork}
-          tokenType={tokenType}
-          setTokenType={setTokenType}
-          tokenName={tokenName}
-          setTokenName={setTokenName}
-          tokenSymbol={tokenSymbol}
-          setTokenSymbol={setTokenSymbol}
-          decimals={decimals}
-          setDecimals={setDecimals}
-          supply={supply}
-          setSupply={setSupply}
-          tokenLogo={tokenLogo}
-          setTokenLogo={setTokenLogo}
-          tokenWebsite={tokenWebsite}
-          setTokenWebsite={setTokenWebsite}
-          tokenTelegram={tokenTelegram}
-          setTokenTelegram={setTokenTelegram}
-          tokenTwitter={tokenTwitter}
-          setTokenTwitter={setTokenTwitter}
-          tokenDescription={tokenDescription}
-          setTokenDescription={setTokenDescription}
-          lockEnabled={lockEnabled}
-          setLockEnabled={setLockEnabled}
-          lockDuration={lockDuration}
-          setLockDuration={setLockDuration}
-          lockReleaseDate={lockReleaseDate}
-          setLockReleaseDate={setLockReleaseDate}
-          lockMintAuthority={lockMintAuthority}
-          setLockMintAuthority={setLockMintAuthority}
-          whitelistEnabled={whitelistEnabled}
-          setWhitelistEnabled={setWhitelistEnabled}
-          whitelistAddresses={whitelistAddresses}
-          setWhitelistAddresses={setWhitelistAddresses}
-          fairMintEnabled={fairMintEnabled}
-          setFairMintEnabled={setFairMintEnabled}
-          maxPerWallet={maxPerWallet}
-          setMaxPerWallet={setMaxPerWallet}
-          immutableToken={immutableToken}
-          setImmutableToken={setImmutableToken}
+        <LaunchpadTab
+          createdTokens={createdTokens}
+          presales={presales}
           walletConnected={walletConnected}
-          creationFee={TOKEN_CREATION_FEE}
+          presaleFee={PRESALE_CREATION_FEE}
           currency="XNT"
-          onCreateToken={handleCreateToken}
+          onCreatePresale={handleCreatePresale}
+          onViewPresale={(presale) => setSelectedPresale(presale)}
+          selectedTokenForPresale={selectedTokenForPresale}
+          setSelectedTokenForPresale={setSelectedTokenForPresale}
         />
       </main>
 
@@ -296,6 +259,22 @@ export default function CreateTokenPage() {
 
       <WalletConnectModal isOpen={showWalletModal} onClose={() => setShowWalletModal(false)} onConnectBackpack={connectBackpack} onConnectPhantom={connectPhantom} />
       <WalletApprovalModal isOpen={showApprovalModal} onClose={() => { setShowApprovalModal(false); setApprovalData(null); }} onApprove={handleApproveTransaction} isLoading={approvalLoading} approvalData={approvalData} />
+      <PresaleDetailModal presale={selectedPresale} onClose={() => setSelectedPresale(null)} onInvest={(presale) => { setShowInvestModal(true); setInvestAmount(0); }} walletConnected={walletConnected} />
+      <InvestModal isOpen={showInvestModal} onClose={() => { setShowInvestModal(false); setInvestAmount(0); }} presale={selectedPresale} investAmount={investAmount} setInvestAmount={setInvestAmount} currency="XNT" onConfirm={() => {
+        setApprovalData({
+          type: 'presale_investment',
+          title: 'Invest in Presale',
+          amount: investAmount,
+          currency: 'XNT',
+          details: {
+            tokenName: selectedPresale.tokenName,
+            tokenSymbol: selectedPresale.tokenSymbol,
+            action: `Invest ${investAmount} XNT`
+          }
+        });
+        setShowInvestModal(false);
+        setShowApprovalModal(true);
+      }} />
     </div>
   );
 }
