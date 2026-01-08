@@ -26,7 +26,14 @@ export default function X1TokenLauncher() {
   const [supply, setSupply] = useState(1000000);
   const [tokenLogo, setTokenLogo] = useState('');
   const [tokenWebsite, setTokenWebsite] = useState('');
+  const [tokenTelegram, setTokenTelegram] = useState('');
+  const [tokenTwitter, setTokenTwitter] = useState('');
   const [tokenDescription, setTokenDescription] = useState('');
+  
+  // Token Lock
+  const [lockEnabled, setLockEnabled] = useState(false);
+  const [lockDuration, setLockDuration] = useState(30);
+  const [lockReleaseDate, setLockReleaseDate] = useState('');
   
   // Advanced Options
   const [lockMintAuthority, setLockMintAuthority] = useState(false);
@@ -284,11 +291,16 @@ export default function X1TokenLauncher() {
           network,
           logo: tokenLogo,
           website: tokenWebsite,
+          telegram: tokenTelegram,
+          twitter: tokenTwitter,
           description: tokenDescription,
           lockMint: lockMintAuthority,
           fairMint: fairMintEnabled,
           maxPerWallet: fairMintEnabled ? maxPerWallet : 0,
           immutable: immutableToken,
+          lockEnabled: lockEnabled,
+          lockDuration: lockDuration,
+          lockReleaseDate: lockReleaseDate,
           totalMinted: 0,
           burned: 0,
           txHash: result.txHash,
@@ -304,12 +316,17 @@ export default function X1TokenLauncher() {
         setTokenSymbol('');
         setTokenLogo('');
         setTokenWebsite('');
+        setTokenTelegram('');
+        setTokenTwitter('');
         setTokenDescription('');
         setLockMintAuthority(false);
         setWhitelistAddresses('');
         setWhitelistEnabled(false);
         setFairMintEnabled(false);
         setImmutableToken(false);
+        setLockEnabled(false);
+        setLockDuration(30);
+        setLockReleaseDate('');
         
         alert(`✅ Token created on-chain!\nAddress: ${result.tokenAddress}\nTx: ${result.txHash}`);
       } 
@@ -534,8 +551,18 @@ export default function X1TokenLauncher() {
                 setTokenLogo={setTokenLogo}
                 tokenWebsite={tokenWebsite}
                 setTokenWebsite={setTokenWebsite}
+                tokenTelegram={tokenTelegram}
+                setTokenTelegram={setTokenTelegram}
+                tokenTwitter={tokenTwitter}
+                setTokenTwitter={setTokenTwitter}
                 tokenDescription={tokenDescription}
                 setTokenDescription={setTokenDescription}
+                lockEnabled={lockEnabled}
+                setLockEnabled={setLockEnabled}
+                lockDuration={lockDuration}
+                setLockDuration={setLockDuration}
+                lockReleaseDate={lockReleaseDate}
+                setLockReleaseDate={setLockReleaseDate}
                 lockMintAuthority={lockMintAuthority}
                 setLockMintAuthority={setLockMintAuthority}
                 whitelistEnabled={whitelistEnabled}

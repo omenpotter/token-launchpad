@@ -1,10 +1,10 @@
-import X1TokenLauncher from './pages/X1TokenLauncher';
 import LiquidityPool from './pages/LiquidityPool';
+import X1TokenLauncher from './pages/X1TokenLauncher';
 
 
 export const PAGES = {
-    "X1TokenLauncher": X1TokenLauncher,
     "LiquidityPool": LiquidityPool,
+    "X1TokenLauncher": X1TokenLauncher,
 }
 
 export const pagesConfig = {
