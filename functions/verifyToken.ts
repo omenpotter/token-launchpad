@@ -50,11 +50,84 @@ async function getTokenInfo(mintAddress) {
       { encoding: 'jsonParsed' }
     ]);
     
-    return accountInfo?.value?.data?.parsed?.info || null;
+    const info = accountInfo?.value?.data?.parsed?.info || null;
+    const extensions = accountInfo?.value?.data?.parsed?.info?.extensions || [];
+    
+    return { info, extensions, raw: accountInfo };
   } catch (error) {
     console.error('Error fetching token info:', error);
     return null;
   }
+}
+
+async function detectToken2022Features(extensions, mintAddress) {
+  const features = {
+    hasTransferHook: false,
+    transferHookProgram: null,
+    hasTransferFee: false,
+    transferFeeConfig: null,
+    hasInterestBearing: false,
+    hasPermanentDelegate: false,
+    permanentDelegate: null,
+    hasMetadataPointer: false,
+    hasGroupPointer: false,
+    hasMemberPointer: false
+  };
+
+  if (!extensions || extensions.length === 0) return features;
+
+  for (const ext of extensions) {
+    const extType = ext.extension || ext.type;
+    
+    if (extType === 'transferHook') {
+      features.hasTransferHook = true;
+      features.transferHookProgram = ext.state?.programId || ext.programId;
+    }
+    if (extType === 'transferFeeConfig') {
+      features.hasTransferFee = true;
+      features.transferFeeConfig = ext.state;
+    }
+    if (extType === 'interestBearingConfig') {
+      features.hasInterestBearing = true;
+    }
+    if (extType === 'permanentDelegate') {
+      features.hasPermanentDelegate = true;
+      features.permanentDelegate = ext.state?.delegate || ext.delegate;
+    }
+    if (extType === 'metadataPointer') {
+      features.hasMetadataPointer = true;
+    }
+    if (extType === 'groupPointer') {
+      features.hasGroupPointer = true;
+    }
+    if (extType === 'memberPointer') {
+      features.hasMemberPointer = true;
+    }
+  }
+
+  return features;
+}
+
+async function detectBuybackAndTaxes(mintAddress, transferHookProgram) {
+  // Placeholder for advanced detection - would need to analyze transfer hook program code
+  const analysis = {
+    hasBuyback: false,
+    buybackWallet: null,
+    taxesAreDynamic: false,
+    maxBuyTax: 0,
+    maxSellTax: 0,
+    canChangeTaxes: false
+  };
+
+  // If transfer hook exists, there's potential for dynamic behavior
+  if (transferHookProgram) {
+    analysis.taxesAreDynamic = true;
+    analysis.canChangeTaxes = true;
+    analysis.maxBuyTax = 3; // Default assumption for safety
+    analysis.maxSellTax = 3;
+  }
+
+  return analysis;
 }
 
 function calculateRiskScore(checks) {
@@ -71,6 +144,22 @@ function calculateRiskScore(checks) {
   if (!checks.freezeAuthorityRevoked) {
     score += 15;
     warnings.push('Freeze authority is active - accounts can be frozen');
+  }
+
+  // Token-2022 specific risks
+  if (checks.hasTransferHook) {
+    score += 20;
+    warnings.push('Transfer hook detected - custom logic can be executed on every transfer');
+  }
+
+  if (checks.hasPermanentDelegate) {
+    score += 25;
+    warnings.push('Permanent delegate detected - can control token transfers');
+  }
+
+  if (checks.taxesAreDynamic || checks.canChangeTaxes) {
+    score += 15;
+    warnings.push('Taxes can be changed dynamically by the contract');
   }
 
   // Tax checks (medium risk if high)
@@ -126,17 +215,29 @@ Deno.serve(async (req) => {
     }
 
     // Fetch token info from X1 chain
-    const tokenInfo = await getTokenInfo(mintAddress);
+    const tokenData = await getTokenInfo(mintAddress);
 
-    if (!tokenInfo) {
+    if (!tokenData || !tokenData.info) {
       return Response.json({ 
         error: 'Token not found on X1 Mainnet' 
       }, { status: 404 });
     }
 
+    const tokenInfo = tokenData.info;
+    const extensions = tokenData.extensions;
+
+    // Detect Token-2022 features
+    const token2022Features = await detectToken2022Features(extensions, mintAddress);
+    
+    // Detect buyback and dynamic taxes
+    const taxAnalysis = await detectBuybackAndTaxes(
+      mintAddress, 
+      token2022Features.transferHookProgram
+    );
+
     // Automated checks
     const checks = {
-      programType: tokenInfo.extensions ? 'Token-2022' : 'SPL Token',
+      programType: extensions && extensions.length > 0 ? 'Token-2022' : 'SPL Token',
       mintAuthorityRevoked: !tokenInfo.mintAuthority,
       freezeAuthorityRevoked: !tokenInfo.freezeAuthority,
       totalSupply: parseInt(tokenInfo.supply || 0),
@@ -144,10 +245,20 @@ Deno.serve(async (req) => {
       isMintable: !!tokenInfo.mintAuthority,
       supplyRisk: !!tokenInfo.mintAuthority,
       
-      // Tokenomics (placeholder - would need transfer hook analysis)
-      buyTax: 0,
-      sellTax: 0,
+      // Token-2022 Features
+      hasTransferHook: token2022Features.hasTransferHook,
+      transferHookProgram: token2022Features.transferHookProgram,
+      hasTransferFee: token2022Features.hasTransferFee,
+      hasPermanentDelegate: token2022Features.hasPermanentDelegate,
+      permanentDelegate: token2022Features.permanentDelegate,
+      
+      // Tokenomics
+      buyTax: taxAnalysis.maxBuyTax,
+      sellTax: taxAnalysis.maxSellTax,
       hasBurnMechanism: false,
+      hasBuyback: taxAnalysis.hasBuyback,
+      taxesAreDynamic: taxAnalysis.taxesAreDynamic,
+      canChangeTaxes: taxAnalysis.canChangeTaxes,
       
       // Liquidity (placeholder - would need DEX analysis)
       hasLiquidity: false,

@@ -36,7 +36,7 @@ export default function SharedHeader() {
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-slate-900/80 border-b border-slate-800/50">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link to={createPageUrl('X1TokenLauncher')} className="flex items-center gap-3">
+            <Link to={createPageUrl('Minting')} className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl overflow-hidden">
                 <img src={X1_LOGO} alt="X1Space" className="w-full h-full object-cover" />
               </div>

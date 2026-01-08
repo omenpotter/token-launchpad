@@ -11,6 +11,10 @@ export default function TokenVerificationPage() {
   const [mintAddress, setMintAddress] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportCategory, setReportCategory] = useState('suspicious');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
 
   // Fetch verified tokens from database
   const { data: verifiedTokens = [] } = useQuery({
@@ -30,7 +34,6 @@ export default function TokenVerificationPage() {
 
     setVerifying(true);
     try {
-      // Call verification backend function
       const result = await base44.functions.invoke('verifyToken', {
         mintAddress: mintAddress.trim(),
         network: 'x1Mainnet'
@@ -41,6 +44,31 @@ export default function TokenVerificationPage() {
       alert('Verification failed: ' + error.message);
     } finally {
       setVerifying(false);
+    }
+  };
+
+  const handleReport = async () => {
+    if (!reportReason.trim()) {
+      alert('Please provide a reason for the report');
+      return;
+    }
+
+    setReportSubmitting(true);
+    try {
+      const result = await base44.functions.invoke('reportToken', {
+        mintAddress: verificationResult.mintAddress,
+        reason: reportReason.trim(),
+        category: reportCategory
+      });
+      
+      alert(result.data.message);
+      setShowReportModal(false);
+      setReportReason('');
+      setReportCategory('suspicious');
+    } catch (error) {
+      alert('Failed to submit report: ' + error.message);
+    } finally {
+      setReportSubmitting(false);
     }
   };
 
@@ -272,9 +300,25 @@ export default function TokenVerificationPage() {
               </div>
             </div>
 
+            {/* Token-2022 Features */}
+            {verificationResult.checks?.hasTransferHook && (
+              <div className="mt-4 bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap className="w-5 h-5 text-purple-400" />
+                  <h4 className="font-semibold text-purple-400">Token-2022 Features Detected</h4>
+                </div>
+                <div className="space-y-1 text-sm text-purple-300">
+                  {verificationResult.checks.hasTransferHook && <p>• Transfer Hook Program Active</p>}
+                  {verificationResult.checks.hasTransferFee && <p>• Transfer Fee Extension</p>}
+                  {verificationResult.checks.hasPermanentDelegate && <p>• Permanent Delegate Detected</p>}
+                  {verificationResult.checks.taxesAreDynamic && <p>• Dynamic Tax Configuration</p>}
+                </div>
+              </div>
+            )}
+
             {/* Warnings */}
             {verificationResult.warnings?.length > 0 && (
-              <div className="mt-6 bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+              <div className="mt-4 bg-red-500/10 border border-red-500/20 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <AlertTriangle className="w-5 h-5 text-red-400" />
                   <h4 className="font-semibold text-red-400">Warnings</h4>
@@ -286,7 +330,78 @@ export default function TokenVerificationPage() {
                 </ul>
               </div>
             )}
+
+            {/* Report Button */}
+            <div className="mt-4">
+              <button
+                onClick={() => setShowReportModal(true)}
+                className="w-full px-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl transition font-medium"
+              >
+                Report Suspicious Token
+              </button>
+            </div>
           </motion.div>
+        )}
+
+        {/* Report Modal */}
+        {showReportModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-slate-800 rounded-2xl p-6 max-w-md w-full border border-slate-700"
+            >
+              <h3 className="text-xl font-bold text-white mb-4">Report Token</h3>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-300 mb-2">Category</label>
+                <select
+                  value={reportCategory}
+                  onChange={(e) => setReportCategory(e.target.value)}
+                  className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none"
+                >
+                  <option value="suspicious">Suspicious Activity</option>
+                  <option value="scam">Scam</option>
+                  <option value="rug_pull">Rug Pull</option>
+                  <option value="honeypot">Honeypot</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-300 mb-2">Reason</label>
+                <textarea
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  placeholder="Describe why this token is suspicious..."
+                  rows={4}
+                  className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none resize-none"
+                />
+              </div>
+
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 mb-4">
+                <p className="text-xs text-yellow-300">
+                  Reports are reviewed automatically. After {5} reports, the token will be re-analyzed. Abuse of this system may result in restrictions.
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowReportModal(false); setReportReason(''); }}
+                  className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReport}
+                  disabled={reportSubmitting}
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-500 disabled:bg-slate-600 text-white rounded-xl transition"
+                >
+                  {reportSubmitting ? 'Submitting...' : 'Submit Report'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
 
         {/* Verified Tokens List */}
