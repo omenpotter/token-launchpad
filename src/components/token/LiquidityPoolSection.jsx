@@ -10,7 +10,8 @@ export default function LiquidityPoolSection({
   setLiquidityLockPeriod,
   pairToken,
   setPairToken,
-  currency
+  currency,
+  createdTokens = []
 }) {
   const lockPeriods = [
     { value: 0, label: 'No Lock' },
@@ -55,7 +56,12 @@ export default function LiquidityPoolSection({
                 onChange={(e) => setPairToken(e.target.value)}
                 className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition"
               >
-                <option value="native">{currency}</option>
+                <option value="native">{currency} (Native)</option>
+                {createdTokens.map(token => (
+                  <option key={token.id} value={token.symbol}>
+                    {token.name} ({token.symbol})
+                  </option>
+                ))}
                 <option value="usdc">USDC</option>
                 <option value="usdt">USDT</option>
               </select>
