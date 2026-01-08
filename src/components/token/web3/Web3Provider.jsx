@@ -179,8 +179,9 @@ class SolanaWeb3Service {
       // Sign with mint keypair
       transaction.partialSign(mintKeypair);
 
-      // Send transaction via wallet adapter
-      const signature = await this.wallet.sendTransaction(transaction, this.connection);
+      // Sign with wallet and send
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize());
 
       // Confirm transaction
       await this.connection.confirmTransaction(signature, 'confirmed');
@@ -240,7 +241,8 @@ class SolanaWeb3Service {
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = this.publicKey;
 
-      const signature = await this.wallet.sendTransaction(transaction, this.connection);
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize());
       await this.connection.confirmTransaction(signature, 'confirmed');
 
       return {
@@ -285,7 +287,8 @@ class SolanaWeb3Service {
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = this.publicKey;
 
-      const signature = await this.wallet.sendTransaction(transaction, this.connection);
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize());
       await this.connection.confirmTransaction(signature, 'confirmed');
 
       return {
@@ -341,7 +344,8 @@ class SolanaWeb3Service {
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = this.publicKey;
 
-      const signature = await this.wallet.sendTransaction(transaction, this.connection);
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize());
       await this.connection.confirmTransaction(signature, 'confirmed');
 
       return {
@@ -367,7 +371,8 @@ class SolanaWeb3Service {
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = this.publicKey;
 
-      const signature = await this.wallet.sendTransaction(transaction, this.connection);
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize());
       await this.connection.confirmTransaction(signature, 'confirmed');
 
       return {
@@ -402,7 +407,8 @@ class SolanaWeb3Service {
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = this.publicKey;
 
-      const signature = await this.wallet.sendTransaction(transaction, this.connection);
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize());
       await this.connection.confirmTransaction(signature, 'confirmed');
 
       return {
@@ -435,7 +441,8 @@ class SolanaWeb3Service {
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = this.publicKey;
 
-      const signature = await this.wallet.sendTransaction(transaction, this.connection);
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize());
       await this.connection.confirmTransaction(signature, 'confirmed');
 
       return {
