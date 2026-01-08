@@ -1,5 +1,7 @@
 import React from 'react';
-import { Droplets, Lock, Clock, AlertCircle } from 'lucide-react';
+import { Droplets, Lock, Clock, AlertCircle, ExternalLink, Plus } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 
 export default function LiquidityPoolSection({
   createLiquidity,
@@ -48,6 +50,35 @@ export default function LiquidityPoolSection({
 
       {createLiquidity && (
         <div className="p-5 space-y-4">
+          {/* Quick Actions */}
+          <div className="flex flex-wrap gap-3 mb-4">
+            <a
+              href="https://app.xdex.xyz/liquidity/add"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl transition font-medium text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Create New Pool on xDEX
+            </a>
+            <Link
+              to={createPageUrl('LiquidityPool')}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition font-medium text-sm"
+            >
+              <Droplets className="w-4 h-4" />
+              Manage Liquidity
+            </Link>
+            <a
+              href="https://app.xdex.xyz/liquidity"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition font-medium text-sm"
+            >
+              <ExternalLink className="w-4 h-4" />
+              View All Pools
+            </a>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">Select Token</label>
@@ -99,17 +130,6 @@ export default function LiquidityPoolSection({
                 </span>
               </div>
             </div>
-
-            <div className="flex items-end">
-              <a
-                href="https://app.xdex.xyz/liquidity"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full px-4 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl transition font-medium text-center"
-              >
-                Add Liquidity on xDEX
-              </a>
-            </div>
           </div>
 
           <div>
@@ -153,7 +173,7 @@ export default function LiquidityPoolSection({
             <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm text-blue-300">
-                A portion of your token supply will be paired with {currency} to create the initial liquidity pool.
+                Liquidity pools are created and managed through xDEX. Your tokens will be paired with {currency} to create the initial liquidity pool.
               </p>
             </div>
           </div>
