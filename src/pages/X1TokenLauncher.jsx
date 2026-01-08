@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, Coins, Zap, LayoutDashboard, Rocket, LogOut, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import '../components/token/web3/polyfills';
 
 import WalletConnectModal from '../components/token/WalletConnectModal';
 import WalletApprovalModal from '../components/token/WalletApprovalModal';
