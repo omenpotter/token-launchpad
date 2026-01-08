@@ -27,17 +27,18 @@ export const NETWORK_CONFIG = {
   }
 };
 
+// Fee recipient wallet address
+export const FEE_RECIPIENT_ADDRESS = '2W3pa4Rn6xBrev2GDFSntzPd2nNMhJ17FHAZ5Gq2bWDW';
+
 // Program Addresses (Solana Programs)
 export const PROGRAM_ADDRESSES = {
   x1Testnet: {
     TokenProgram: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-    TokenFactory: '11111111111111111111111111111111',
     DEXProgram: '11111111111111111111111111111111',
     PresaleProgram: '11111111111111111111111111111111'
   },
   x1Mainnet: {
     TokenProgram: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-    TokenFactory: '11111111111111111111111111111111',
     DEXProgram: '11111111111111111111111111111111',
     PresaleProgram: '11111111111111111111111111111111'
   }
