@@ -41,7 +41,11 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
       lockMint: token.lockMint || false,
       immutable: token.immutable || false,
       fairMint: token.fairMint || false,
-      maxPerWallet: token.maxPerWallet || 1000
+      maxPerWallet: token.maxPerWallet || 1000,
+      website: token.website || '',
+      telegram: token.telegram || '',
+      twitter: token.twitter || '',
+      description: token.description || ''
     });
   };
 
@@ -49,16 +53,15 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
     try {
       await base44.entities.Token.update(editingTokenId, editValues);
       
-      const updatedTokens = createdTokens.map(t => {
-        if (t.id === editingTokenId) {
-          return { ...t, ...editValues };
-        }
-        return t;
-      });
-      setCreatedTokens(updatedTokens);
+      // Trigger refetch
+      if (typeof setCreatedTokens === 'function') {
+        await setCreatedTokens();
+      }
+      
       setEditingTokenId(null);
       alert('✅ Token settings saved successfully!');
     } catch (error) {
+      console.error('Save error:', error);
       alert('Failed to save changes: ' + error.message);
     }
   };
@@ -413,6 +416,41 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
                           <span className="text-white font-medium">{token.maxPerWallet?.toLocaleString() || 'Not Set'}</span>
                         )}
                       </div>
+                    )}
+
+                    {editingTokenId === token.id && (
+                      <>
+                        <div className="p-3 bg-slate-700/30 rounded-lg">
+                          <label className="text-sm text-slate-300 mb-2 block">Website URL</label>
+                          <input
+                            type="url"
+                            placeholder="https://example.com"
+                            value={editValues.website}
+                            onChange={(e) => setEditValues({...editValues, website: e.target.value})}
+                            className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <div className="p-3 bg-slate-700/30 rounded-lg">
+                          <label className="text-sm text-slate-300 mb-2 block">Telegram Link</label>
+                          <input
+                            type="url"
+                            placeholder="https://t.me/..."
+                            value={editValues.telegram}
+                            onChange={(e) => setEditValues({...editValues, telegram: e.target.value})}
+                            className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <div className="p-3 bg-slate-700/30 rounded-lg">
+                          <label className="text-sm text-slate-300 mb-2 block">X (Twitter) Link</label>
+                          <input
+                            type="url"
+                            placeholder="https://x.com/..."
+                            value={editValues.twitter}
+                            onChange={(e) => setEditValues({...editValues, twitter: e.target.value})}
+                            className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm"
+                          />
+                        </div>
+                      </>
                     )}
                   </div>
                 </motion.div>

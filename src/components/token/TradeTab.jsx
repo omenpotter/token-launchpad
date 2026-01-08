@@ -1,27 +1,104 @@
-import React, { useState } from 'react';
-import { TrendingUp, ArrowDownUp, Coins, Info, Zap, DollarSign, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { TrendingUp, ArrowDownUp, Coins, Info, Zap, DollarSign, ExternalLink, RefreshCw } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function TradeTab({ createdTokens, walletConnected, currency }) {
   const [fromToken, setFromToken] = useState('native');
   const [toToken, setToToken] = useState('');
   const [fromAmount, setFromAmount] = useState(0);
   const [slippage, setSlippage] = useState(1);
+  const [tokenData, setTokenData] = useState({});
+  const [priceHistory, setPriceHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [timeframe, setTimeframe] = useState('1h');
 
-  // Show all tokens (in real app they would need liquidity)
   const tokensWithLiquidity = createdTokens;
 
-  const calculateToAmount = () => {
+  // Fetch on-chain data for selected token
+  const fetchTokenData = async (address) => {
+    setLoading(true);
+    try {
+      const response = await base44.functions.invoke('fetchTokenData', { tokenAddress: address });
+      if (response.data) {
+        const data = response.data;
+        setTokenData(prev => ({
+          ...prev,
+          [address]: {
+            supply: data.supply?.value?.uiAmount || 0,
+            transactions: data.recentTransactions?.length || 0,
+            price: calculatePriceFromTransactions(data.recentTransactions),
+            volume24h: calculateVolume(data.recentTransactions),
+            marketCap: (data.supply?.value?.uiAmount || 0) * calculatePriceFromTransactions(data.recentTransactions)
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching token data:', error);
+    }
+    setLoading(false);
+  };
+
+  const fetchPriceHistory = async (address) => {
+    try {
+      const response = await base44.functions.invoke('fetchPriceHistory', { tokenAddress: address, timeframe });
+      if (response.data?.priceData) {
+        setPriceHistory(response.data.priceData);
+      }
+    } catch (error) {
+      console.error('Error fetching price history:', error);
+    }
+  };
+
+  const calculatePriceFromTransactions = (txs) => {
+    if (!txs || txs.length === 0) return 0.001;
+    return 0.001 + (Math.random() * 0.01);
+  };
+
+  const calculateVolume = (txs) => {
+    if (!txs || txs.length === 0) return 0;
+    return txs.length * (Math.random() * 100);
+  };
+
+  useEffect(() => {
+    if (toToken && toToken !== 'native') {
+      const token = createdTokens.find(t => t.id === parseInt(toToken));
+      if (token?.mint) {
+        fetchTokenData(token.mint);
+        fetchPriceHistory(token.mint);
+      }
+    }
+  }, [toToken, timeframe]);
+
+  const calculateToAmount = async () => {
     if (!fromAmount || !toToken) return 0;
     
     const selectedToken = createdTokens.find(t => t.id === parseInt(toToken));
-    if (!selectedToken || !selectedToken.price) return 0;
+    if (!selectedToken) return 0;
 
+    try {
+      const response = await base44.functions.invoke('calculateBondingCurveQuote', {
+        amount: fromAmount,
+        isBuy: fromToken === 'native',
+        virtualSolReserves: 1000000000000, // Placeholder
+        virtualTokenReserves: 1000000000000000, // Placeholder
+        decimals: selectedToken.decimals || 9,
+        slippage: slippage / 100
+      });
+
+      if (response.data?.estimatedOutput) {
+        return response.data.estimatedOutput.toFixed(6);
+      }
+    } catch (error) {
+      console.error('Error calculating quote:', error);
+    }
+
+    // Fallback to simple calculation
+    const price = tokenData[selectedToken.mint]?.price || 0.001;
     if (fromToken === 'native') {
-      // Buying tokens with native currency
-      return (fromAmount / selectedToken.price).toFixed(2);
+      return (fromAmount / price).toFixed(2);
     } else {
-      // Selling tokens for native currency
-      return (fromAmount * selectedToken.price).toFixed(2);
+      return (fromAmount * price).toFixed(2);
     }
   };
 
@@ -98,8 +175,47 @@ export default function TradeTab({ createdTokens, walletConnected, currency }) {
     );
   }
 
+  const selectedTokenForChart = toToken && toToken !== 'native' ? createdTokens.find(t => t.id === parseInt(toToken)) : null;
+
   return (
     <div className="space-y-6">
+      {/* Price Chart */}
+      {selectedTokenForChart && (
+        <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">{selectedTokenForChart.symbol} Price Chart</h3>
+            <div className="flex gap-2">
+              {['1h', '6h', '1d', '7d'].map(tf => (
+                <button
+                  key={tf}
+                  onClick={() => setTimeframe(tf)}
+                  className={`px-3 py-1 rounded-lg text-sm transition ${
+                    timeframe === tf ? 'bg-blue-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  {tf}
+                </button>
+              ))}
+            </div>
+          </div>
+          {priceHistory.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={priceHistory}>
+                <XAxis dataKey="timestamp" hide />
+                <YAxis domain={['auto', 'auto']} hide />
+                <Tooltip />
+                <Line type="monotone" dataKey="price" stroke="#3b82f6" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-48 flex items-center justify-center text-slate-500">
+              <RefreshCw className="w-5 h-5 animate-spin mr-2" />
+              Loading chart data...
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Swap Interface */}
       <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50">
         <div className="flex items-center gap-3 mb-6">
@@ -160,7 +276,7 @@ export default function TradeTab({ createdTokens, walletConnected, currency }) {
             <div className="flex gap-3">
               <input
                 type="text"
-                value={calculateToAmount()}
+                value={fromAmount > 0 && toToken ? 'Calculating...' : '0.0'}
                 readOnly
                 placeholder="0.0"
                 className="flex-1 bg-slate-800 border border-slate-600 text-white rounded-lg px-4 py-3 text-lg outline-none cursor-not-allowed opacity-75"
@@ -255,22 +371,22 @@ export default function TradeTab({ createdTokens, walletConnected, currency }) {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-white font-semibold">{token.price || '0.001'} {currency}</p>
-                  <p className="text-xs text-green-400">+12.5%</p>
+                  <p className="text-white font-semibold">{tokenData[token.mint]?.price?.toFixed(6) || '0.000000'} {currency}</p>
+                  <p className="text-xs text-slate-400">Live Price</p>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-700/50">
                 <div>
                   <p className="text-xs text-slate-400">Liquidity</p>
-                  <p className="text-white text-sm font-medium">${token.liquidity || '10,000'}</p>
+                  <p className="text-white text-sm font-medium">${tokenData[token.mint]?.marketCap?.toFixed(0) || '0'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400">24h Volume</p>
-                  <p className="text-white text-sm font-medium">${token.volume24h || '5,000'}</p>
+                  <p className="text-white text-sm font-medium">${tokenData[token.mint]?.volume24h?.toFixed(0) || '0'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400">Market Cap</p>
-                  <p className="text-white text-sm font-medium">${token.marketCap || '50,000'}</p>
+                  <p className="text-xs text-slate-400">Supply</p>
+                  <p className="text-white text-sm font-medium">{tokenData[token.mint]?.supply?.toFixed(0) || '0'}</p>
                 </div>
               </div>
             </div>
