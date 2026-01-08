@@ -16,7 +16,10 @@ export default function TradePage() {
 
   const { data: createdTokens = [], refetch } = useQuery({
     queryKey: ['tokens'],
-    queryFn: () => base44.entities.Token.list(),
+    queryFn: async () => {
+      const tokens = await base44.entities.Token.list();
+      return tokens.filter(t => t.network === 'x1Mainnet');
+    },
     initialData: []
   });
 
