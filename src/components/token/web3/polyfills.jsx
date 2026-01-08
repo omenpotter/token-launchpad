@@ -1,4 +1,7 @@
-import { Buffer } from 'buffer';
 
-// Make Buffer available globally for Solana libraries
-window.Buffer = Buffer;
+// Import buffer for Solana web3.js compatibility
+if (typeof window !== 'undefined') {
+  window.Buffer = window.Buffer || require('buffer').Buffer;
+  window.global = window;
+  window.process = window.process || { env: {} };
+}
