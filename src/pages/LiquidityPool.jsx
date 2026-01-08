@@ -22,7 +22,12 @@ export default function LiquidityPoolPage() {
 
   const { data: tokens = [] } = useQuery({
     queryKey: ['tokens', walletAddress],
-    queryFn: () => walletAddress ? base44.entities.Token.filter({ creator: walletAddress }) : base44.entities.Token.list(),
+    queryFn: async () => {
+      const allTokens = walletAddress 
+        ? await base44.entities.Token.filter({ creator: walletAddress }) 
+        : await base44.entities.Token.list();
+      return allTokens.filter(t => t.network === 'x1Mainnet');
+    },
     initialData: []
   });
 
