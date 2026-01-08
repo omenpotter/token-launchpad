@@ -39,12 +39,12 @@ export default function WalletConnectModal({ isOpen, onClose, onConnectBackpack,
               onClick={onConnectBackpack}
               className="w-full bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-xl p-4 flex items-center gap-4 transition group"
             >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-2xl">
-                🦊
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-2xl">
+                📦
               </div>
               <div className="flex-1 text-left">
-                <p className="font-semibold text-white group-hover:text-blue-300 transition">MetaMask / Web3</p>
-                <p className="text-sm text-slate-400">Connect to X1 Network</p>
+                <p className="font-semibold text-white group-hover:text-blue-300 transition">Backpack</p>
+                <p className="text-sm text-slate-400">Connect to Backpack wallet</p>
               </div>
               <ExternalLink className="w-5 h-5 text-slate-500 group-hover:text-blue-400 transition" />
             </button>
@@ -53,12 +53,12 @@ export default function WalletConnectModal({ isOpen, onClose, onConnectBackpack,
               onClick={onConnectPhantom}
               className="w-full bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-xl p-4 flex items-center gap-4 transition group"
             >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-2xl">
-                💼
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-2xl">
+                👻
               </div>
               <div className="flex-1 text-left">
-                <p className="font-semibold text-white group-hover:text-blue-300 transition">Other Web3 Wallets</p>
-                <p className="text-sm text-slate-400">Any Ethereum-compatible wallet</p>
+                <p className="font-semibold text-white group-hover:text-blue-300 transition">Phantom</p>
+                <p className="text-sm text-slate-400">Connect to Phantom wallet</p>
               </div>
               <ExternalLink className="w-5 h-5 text-slate-500 group-hover:text-blue-400 transition" />
             </button>
