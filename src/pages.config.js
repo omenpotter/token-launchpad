@@ -5,6 +5,7 @@ import Minting from './pages/Minting';
 import Dashboard from './pages/Dashboard';
 import Launchpad from './pages/Launchpad';
 import Trade from './pages/Trade';
+import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
@@ -20,4 +21,5 @@ export const PAGES = {
 export const pagesConfig = {
     mainPage: "X1TokenLauncher",
     Pages: PAGES,
+    Layout: __Layout,
 };
