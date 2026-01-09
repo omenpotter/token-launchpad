@@ -55,8 +55,8 @@ export function WalletProvider({ children }) {
           }
         }
 
-        // Check X1 Wallet (multiple provider locations)
-        let x1Provider = window.x1wallet?.solana || (window.solana?.isX1 && window.solana) || window.okxwallet?.solana;
+        // Check X1 Wallet
+        let x1Provider = window.x1Wallet || window.x1 || (window.solana?.isX1Wallet && window.solana);
         if (x1Provider) {
           try {
             // Try to connect silently if previously connected
