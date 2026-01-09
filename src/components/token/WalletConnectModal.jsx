@@ -60,25 +60,15 @@ export default function WalletConnectModal({ isOpen, onClose, onConnectBackpack,
             </button>
 
             <button
-              onClick={onConnectPhantom}
-              className="w-full bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-xl p-4 flex items-center gap-4 transition group"
-            >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-2xl">
-                👻
-              </div>
-              <div className="flex-1 text-left">
-                <p className="font-semibold text-white group-hover:text-blue-300 transition">Phantom</p>
-                <p className="text-sm text-slate-400">Connect to Phantom wallet</p>
-              </div>
-              <ExternalLink className="w-5 h-5 text-slate-500 group-hover:text-blue-400 transition" />
-            </button>
-
-            <button
               onClick={onConnectX1}
               className="w-full bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-xl p-4 flex items-center gap-4 transition group"
             >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-2xl">
-                🚀
+              <div className="w-12 h-12 rounded-xl overflow-hidden">
+                <img 
+                  src="https://x1logos.s3.us-east-1.amazonaws.com/128+-+wallet.png" 
+                  alt="X1 Wallet" 
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div className="flex-1 text-left">
                 <p className="font-semibold text-white group-hover:text-blue-300 transition">X1 Wallet</p>
