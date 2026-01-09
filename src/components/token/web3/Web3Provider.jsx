@@ -30,6 +30,7 @@ class SolanaWeb3Service {
     this.wallet = null;
     this.publicKey = null;
     this.network = 'x1Testnet';
+    this.appName = 'X1Space';
   }
 
   // Initialize connection
@@ -48,12 +49,15 @@ class SolanaWeb3Service {
         throw new Error('No wallet adapter provided');
       }
 
-      // Store wallet adapter
       this.wallet = walletAdapter;
+      this.appName = appName;
 
-      // Connect if not already connected
       if (!walletAdapter.connected) {
-        await walletAdapter.connect();
+        try {
+          await walletAdapter.connect({ appName });
+        } catch (e) {
+          await walletAdapter.connect();
+        }
       }
 
       this.publicKey = walletAdapter.publicKey;
