@@ -5,13 +5,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 export default function SendToMintingModal({ isOpen, onClose, token, onConfirm }) {
   const [enableFairMint, setEnableFairMint] = useState(false);
   const [maxPerWallet, setMaxPerWallet] = useState(1000);
+  const [mintingFee, setMintingFee] = useState(0);
 
   if (!isOpen || !token) return null;
 
   const handleConfirm = () => {
     onConfirm({
       enableFairMint,
-      maxPerWallet: enableFairMint ? maxPerWallet : 0
+      maxPerWallet: enableFairMint ? maxPerWallet : 0,
+      mintingFee
     });
     onClose();
   };
@@ -88,6 +90,21 @@ export default function SendToMintingModal({ isOpen, onClose, token, onConfirm }
                 />
               </motion.div>
             )}
+
+            <div className="bg-slate-700/30 rounded-xl p-4">
+              <label className="block text-sm text-slate-300 mb-2">Minting Fee (XNT per mint)</label>
+              <input
+                type="number"
+                value={mintingFee}
+                onChange={(e) => setMintingFee(Math.max(0, Number(e.target.value)))}
+                min={0}
+                step={0.01}
+                className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-4 py-3"
+              />
+              <p className="text-xs text-slate-400 mt-2">
+                {mintingFee === 0 ? '✨ Free mint enabled' : `Users will pay ${mintingFee} XNT per mint`}
+              </p>
+            </div>
 
             <div className="flex gap-3">
               <button

@@ -83,11 +83,12 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
       await base44.entities.Token.update(token.id, {
         sentForMinting: true,
         mintingMaxPerWallet: settings.maxPerWallet,
-        fairMint: settings.enableFairMint
+        fairMint: settings.enableFairMint,
+        mintingFee: settings.mintingFee ?? 0
       });
 
       const updatedTokens = createdTokens.map(t => 
-        t.id === token.id ? { ...t, sentForMinting: true, mintingMaxPerWallet: settings.maxPerWallet, fairMint: settings.enableFairMint } : t
+        t.id === token.id ? { ...t, sentForMinting: true, mintingMaxPerWallet: settings.maxPerWallet, fairMint: settings.enableFairMint, mintingFee: settings.mintingFee ?? 0 } : t
       );
       setCreatedTokens(updatedTokens);
       alert(`✅ ${token.symbol} sent to Minting Page!`);
