@@ -111,16 +111,15 @@ export function WalletProvider({ children }) {
 
   const connectX1 = useCallback(async () => {
     try {
-      // X1 Wallet detection - check multiple possible providers
       let x1Provider = null;
       
-      // Check common X1 Wallet provider locations
-      if (window.x1wallet?.solana) {
-        x1Provider = window.x1wallet.solana;
-      } else if (window.solana?.isX1) {
+      // X1 Wallet detection - based on actual provider.js injection
+      if (window.x1Wallet) {
+        x1Provider = window.x1Wallet;
+      } else if (window.x1) {
+        x1Provider = window.x1;
+      } else if (window.solana?.isX1Wallet) {
         x1Provider = window.solana;
-      } else if (window.okxwallet?.solana) {
-        x1Provider = window.okxwallet.solana;
       }
       
       if (x1Provider) {
