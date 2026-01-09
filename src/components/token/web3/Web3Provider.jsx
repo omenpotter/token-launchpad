@@ -42,7 +42,7 @@ class SolanaWeb3Service {
     return this.connection;
   }
 
-  // Connect wallet with proper branding metadata
+  // Connect wallet with proper branding metadata for wallet approval dialogs
   async connectWallet(walletAdapter, appName = 'X1Space') {
     try {
       if (!walletAdapter) {
@@ -52,26 +52,38 @@ class SolanaWeb3Service {
       this.wallet = walletAdapter;
       this.appName = appName;
 
-      // App metadata for wallet branding
-      const appMetadata = {
+      // Explicit branding metadata for wallet approval popups
+      // This ensures Backpack and X1 Wallet show "X1Space" + logo
+      const dAppMetadata = {
         name: 'X1Space',
-        url: window.location.origin,
-        icon: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/5910381b6_711323c7-8ae9-4314-922d-ccab7986c619.jpg'
+        icon: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/5910381b6_711323c7-8ae9-4314-922d-ccab7986c619.jpg',
+        url: window.location.origin
       };
 
       if (!walletAdapter.connected) {
-        try {
-          // Try with full metadata first (for Backpack)
+        // For Backpack: supports full metadata object
+        if (walletAdapter.name?.toLowerCase().includes('backpack') || window.backpack === walletAdapter) {
+          console.log('[Web3Provider] Connecting Backpack with X1Space branding');
+          await walletAdapter.connect(dAppMetadata);
+        }
+        // For X1 Wallet: pass as options
+        else if (walletAdapter.isX1Wallet || walletAdapter.name?.toLowerCase().includes('x1')) {
+          console.log('[Web3Provider] Connecting X1 Wallet with X1Space branding');
           await walletAdapter.connect({ 
             appName: 'X1Space',
-            ...appMetadata 
+            name: 'X1Space',
+            icon: dAppMetadata.icon
           });
-        } catch (e) {
+        }
+        // Generic fallback
+        else {
+          console.log('[Web3Provider] Connecting wallet with X1Space branding');
           try {
-            // Fallback: try with just appName (for X1 Wallet)
-            await walletAdapter.connect({ appName: 'X1Space' });
-          } catch (e2) {
-            // Final fallback: no options
+            await walletAdapter.connect({ 
+              ...dAppMetadata,
+              appName: 'X1Space'
+            });
+          } catch (e) {
             await walletAdapter.connect();
           }
         }

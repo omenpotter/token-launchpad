@@ -20,8 +20,8 @@ export function WalletProvider({ children }) {
     
     // Check for existing wallet connections
     const checkExistingConnection = async () => {
-      // Wait longer for wallet extensions to inject
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for wallet extensions to inject (critical for X1 Wallet)
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       try {
         // Check Backpack first
@@ -115,26 +115,39 @@ export function WalletProvider({ children }) {
 
   const connectX1 = useCallback(async () => {
     try {
-      // Debug: Log what's available
-      console.log('[X1Space] Checking for X1 Wallet...');
-      console.log('[X1Space] window.x1Wallet:', window.x1Wallet);
-      console.log('[X1Space] window.x1:', window.x1);
-      console.log('[X1Space] window.solana:', window.solana);
+      console.log('[X1Space] ═══ X1 Wallet Detection Started ═══');
+      
+      // Initial check of all possible injection points
+      console.log('[X1Space] window.x1Wallet:', typeof window.x1Wallet, window.x1Wallet?._initialized);
+      console.log('[X1Space] window.x1:', typeof window.x1, window.x1?._initialized);
+      console.log('[X1Space] window.solana:', typeof window.solana);
       console.log('[X1Space] window.solana?.isX1Wallet:', window.solana?.isX1Wallet);
       
-      // Wait for wallet to inject if not immediately available
+      // Check for injected event
+      console.log('[X1Space] Waiting for X1 Wallet injection...');
+      
+      // Listen for injection event
+      let injectionDetected = false;
+      const injectionListener = () => {
+        console.log('[X1Space] 🎯 X1 Wallet injection event detected!');
+        injectionDetected = true;
+      };
+      window.addEventListener('x1Wallet#initialized', injectionListener);
+      
+      // Wait longer for extension injection (up to 2 seconds)
       let retries = 0;
-      const maxRetries = 10;
+      const maxRetries = 20;
+      const retryDelay = 100;
       
       while (retries < maxRetries) {
         let x1Provider = null;
         
-        // X1 Wallet detection - based on actual provider.js injection
-        if (window.x1Wallet) {
-          console.log('[X1Space] ✅ Found via window.x1Wallet');
+        // Check all injection points
+        if (window.x1Wallet?._initialized) {
+          console.log('[X1Space] ✅ Found via window.x1Wallet (initialized)');
           x1Provider = window.x1Wallet;
-        } else if (window.x1) {
-          console.log('[X1Space] ✅ Found via window.x1');
+        } else if (window.x1?._initialized) {
+          console.log('[X1Space] ✅ Found via window.x1 (initialized)');
           x1Provider = window.x1;
         } else if (window.solana?.isX1Wallet) {
           console.log('[X1Space] ✅ Found via window.solana.isX1Wallet');
@@ -142,30 +155,52 @@ export function WalletProvider({ children }) {
         }
         
         if (x1Provider) {
-          console.log('[X1Space] Connecting to X1 Wallet...');
-          const result = await web3Service.connectWallet(x1Provider, 'X1Space');
-          setWalletAddress(result.address);
-          setWalletConnected(true);
-          setWalletType('x1');
-          console.log('[X1Space] ✅ Connected successfully');
-          return { success: true };
+          window.removeEventListener('x1Wallet#initialized', injectionListener);
+          console.log('[X1Space] 🔗 Attempting connection...');
+          
+          try {
+            const result = await web3Service.connectWallet(x1Provider, 'X1Space');
+            setWalletAddress(result.address);
+            setWalletConnected(true);
+            setWalletType('x1');
+            console.log('[X1Space] ✅ Connected successfully to:', result.address);
+            return { success: true };
+          } catch (connError) {
+            console.error('[X1Space] ❌ Connection failed:', connError);
+            return { success: false, error: 'Connection failed: ' + connError.message };
+          }
         }
         
-        // Wait 100ms before retrying
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Wait before next retry
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
         retries++;
-        console.log(`[X1Space] Retry ${retries}/${maxRetries}...`);
+        
+        if (retries % 5 === 0) {
+          console.log(`[X1Space] ⏳ Still waiting... (${retries}/${maxRetries})`);
+        }
       }
       
-      console.error('[X1Space] ❌ X1 Wallet not found after', maxRetries, 'attempts');
-      console.log('[X1Space] Please ensure X1 Wallet extension is installed and enabled');
+      window.removeEventListener('x1Wallet#initialized', injectionListener);
+      
+      console.error('[X1Space] ═══ DETECTION FAILED ═══');
+      console.error('[X1Space] Waited', (maxRetries * retryDelay) / 1000, 'seconds');
+      console.error('[X1Space] Extension status:');
+      console.error('[X1Space] - window.x1Wallet exists:', !!window.x1Wallet);
+      console.error('[X1Space] - window.x1 exists:', !!window.x1);
+      console.error('[X1Space] - Injection event detected:', injectionDetected);
+      
       return { 
         success: false, 
-        error: 'X1 Wallet not detected. Please:\n1. Install X1 Wallet extension\n2. Enable the extension\n3. Refresh this page' 
+        error: 'X1 Wallet not detected after 2 seconds.\n\n' +
+               'Troubleshooting:\n' +
+               '1. Check if extension is installed and enabled\n' +
+               '2. Try refreshing the page\n' +
+               '3. Check browser console for errors\n' +
+               '4. Verify extension has permission for this site' 
       };
     } catch (error) {
-      console.error('[X1Space] Connection error:', error);
-      return { success: false, error: 'Failed to connect X1 Wallet: ' + error.message };
+      console.error('[X1Space] ❌ Unexpected error:', error);
+      return { success: false, error: 'Unexpected error: ' + error.message };
     }
   }, []);
 
