@@ -195,25 +195,25 @@ export default function MintingPage() {
             </div>
             
             <MintingTab
-          createdTokens={createdTokens}
-          selectedTokenForMint={selectedTokenForMint}
-          setSelectedTokenForMint={setSelectedTokenForMint}
-          mintAmount={mintAmount}
-          setMintAmount={setMintAmount}
-          burnAmount={burnAmount}
-          setBurnAmount={setBurnAmount}
-          walletConnected={walletConnected}
-          mintFee={DIRECT_MINT_FEE}
-          currency="XNT"
-          onMint={handleDirectMint}
-          onBurn={handleBurn}
-          walletAddress={walletAddress}
+              createdTokens={createdTokens}
+              selectedTokenForMint={selectedTokenForMint}
+              setSelectedTokenForMint={setSelectedTokenForMint}
+              mintAmount={mintAmount}
+              setMintAmount={setMintAmount}
+              burnAmount={burnAmount}
+              setBurnAmount={setBurnAmount}
+              walletConnected={walletConnected}
+              mintFee={DIRECT_MINT_FEE}
+              currency="XNT"
+              onMint={handleDirectMint}
+              onBurn={handleBurn}
+              walletAddress={walletAddress}
             />
 
             {/* Token Analytics Section */}
             <div className="mt-8">
-          <h3 className="text-lg font-semibold text-white mb-4">Platform Token Analytics</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <h3 className="text-lg font-semibold text-white mb-4">Platform Token Analytics</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
@@ -264,11 +264,10 @@ export default function MintingPage() {
                 </div>
               </div>
               <p className="text-xs text-slate-500">Fair Mint + Presale + Other</p>
-            </div>
-          </div>
+              </div>
 
-          {/* Token Breakdown */}
-          <div className="mt-6 bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
+              {/* Token Breakdown */}
+              <div className="mt-6 bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
             <h4 className="text-sm font-medium text-slate-300 mb-4">Token Distribution</h4>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -318,6 +317,7 @@ export default function MintingPage() {
                   style={{ width: `${totalTokens > 0 ? (otherTokens.length / totalTokens) * 100 : 0}%` }}
                 ></div>
               </div>
+                </div>
               </div>
             </div>
           </div>
