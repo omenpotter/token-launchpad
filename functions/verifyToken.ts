@@ -305,6 +305,48 @@ Deno.serve(async (req) => {
     const { score: riskScore, warnings } = calculateRiskScore(checks);
     const status = determineStatus(riskScore);
 
+    // AI-Powered Risk Analysis
+    let aiAnalysis = null;
+    try {
+      const analysisPrompt = `Analyze this token on X1 blockchain and provide a comprehensive risk assessment:
+      
+Token Details:
+- Mint Authority: ${checks.mintAuthorityRevoked ? 'Revoked ✓' : 'Active ⚠️'}
+- Freeze Authority: ${checks.freezeAuthorityRevoked ? 'Revoked ✓' : 'Active ⚠️'}
+- Token Type: ${checks.programType}
+- Buy Tax: ${checks.buyTax}%
+- Sell Tax: ${checks.sellTax}%
+- Transfer Hook: ${checks.hasTransferHook ? 'Yes' : 'No'}
+- Permanent Delegate: ${checks.hasPermanentDelegate ? 'Yes' : 'No'}
+- Dynamic Taxes: ${checks.taxesAreDynamic ? 'Yes' : 'No'}
+- Supply Mintable: ${checks.isMintable ? 'Yes' : 'No'}
+- Liquidity Status: ${checks.lpStatus}
+- Risk Score: ${riskScore}/100
+
+Provide:
+1. A brief summary (2-3 sentences) of the overall risk profile
+2. 3-5 key risk factors based on contract complexity, tokenomics, and authority controls
+3. A recommendation for investors (proceed with caution, avoid, or relatively safe)
+
+Return as JSON with: summary, riskFactors (array), recommendation`;
+
+      const aiResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
+        prompt: analysisPrompt,
+        response_json_schema: {
+          type: 'object',
+          properties: {
+            summary: { type: 'string' },
+            riskFactors: { type: 'array', items: { type: 'string' } },
+            recommendation: { type: 'string' }
+          }
+        }
+      });
+
+      aiAnalysis = aiResult;
+    } catch (error) {
+      console.error('AI analysis failed:', error);
+    }
+
     // Store verification in database
     try {
       await base44.asServiceRole.entities.Token.create({
@@ -329,6 +371,7 @@ Deno.serve(async (req) => {
       riskScore,
       checks,
       warnings,
+      aiAnalysis,
       verifiedAt: new Date().toISOString(),
       network: 'x1Mainnet'
     });

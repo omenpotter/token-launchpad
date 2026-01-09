@@ -15,6 +15,12 @@ export default function TokenVerificationPage() {
   const [reportReason, setReportReason] = useState('');
   const [reportCategory, setReportCategory] = useState('suspicious');
   const [reportSubmitting, setReportSubmitting] = useState(false);
+  
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterRisk, setFilterRisk] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const tokensPerPage = 10;
 
   // Fetch verified tokens from database
   const { data: verifiedTokens = [] } = useQuery({
@@ -25,6 +31,31 @@ export default function TokenVerificationPage() {
     },
     initialData: []
   });
+
+  // Filter and search logic
+  const filteredTokens = verifiedTokens.filter(token => {
+    const matchesSearch = !searchQuery || 
+      token.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      token.symbol?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      token.mint?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesRisk = filterRisk === 'all' || 
+      (filterRisk === 'low' && (token.riskScore || 0) <= 20) ||
+      (filterRisk === 'medium' && (token.riskScore || 0) > 20 && (token.riskScore || 0) <= 50) ||
+      (filterRisk === 'high' && (token.riskScore || 0) > 50);
+    
+    return matchesSearch && matchesRisk;
+  });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredTokens.length / tokensPerPage);
+  const startIndex = (currentPage - 1) * tokensPerPage;
+  const paginatedTokens = filteredTokens.slice(startIndex, startIndex + tokensPerPage);
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterRisk]);
 
   const handleVerify = async () => {
     if (!mintAddress.trim()) {
@@ -322,6 +353,36 @@ export default function TokenVerificationPage() {
               </div>
             )}
 
+            {/* AI Risk Analysis */}
+            {verificationResult.aiAnalysis && (
+              <div className="mt-4 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Zap className="w-5 h-5 text-purple-400" />
+                  <h4 className="font-semibold text-purple-400">AI-Powered Risk Assessment</h4>
+                </div>
+                <p className="text-sm text-slate-300 mb-3">{verificationResult.aiAnalysis.summary}</p>
+                {verificationResult.aiAnalysis.riskFactors?.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-slate-400 uppercase">Key Risk Factors:</p>
+                    <ul className="space-y-1 text-sm text-slate-300">
+                      {verificationResult.aiAnalysis.riskFactors.map((factor, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <span className="text-purple-400 mt-0.5">•</span>
+                          <span>{factor}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {verificationResult.aiAnalysis.recommendation && (
+                  <div className="mt-3 pt-3 border-t border-slate-700">
+                    <p className="text-xs font-medium text-slate-400 uppercase mb-1">Recommendation:</p>
+                    <p className="text-sm text-slate-300">{verificationResult.aiAnalysis.recommendation}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Warnings */}
             {verificationResult.warnings?.length > 0 && (
               <div className="mt-4 bg-red-500/10 border border-red-500/20 rounded-xl p-4">
@@ -412,29 +473,107 @@ export default function TokenVerificationPage() {
 
         {/* Verified Tokens List */}
         <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50">
-          <h3 className="text-lg font-semibold text-white mb-4">Verified Tokens</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">Verified Tokens</h3>
+            <span className="text-sm text-slate-400">
+              {filteredTokens.length} token{filteredTokens.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+
+          {/* Search and Filter Bar */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by name, symbol, or address..."
+                className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl pl-10 pr-4 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm"
+              />
+            </div>
+            <select
+              value={filterRisk}
+              onChange={(e) => setFilterRisk(e.target.value)}
+              className="bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm"
+            >
+              <option value="all">All Risk Levels</option>
+              <option value="low">Low Risk (≤20)</option>
+              <option value="medium">Medium Risk (21-50)</option>
+              <option value="high">High Risk (>50)</option>
+            </select>
+          </div>
+
+          {/* Token List */}
           <div className="space-y-3">
-            {verifiedTokens.length === 0 ? (
-              <p className="text-slate-400 text-center py-8">No verified tokens yet</p>
+            {paginatedTokens.length === 0 ? (
+              <p className="text-slate-400 text-center py-8">
+                {searchQuery || filterRisk !== 'all' ? 'No tokens match your filters' : 'No verified tokens yet'}
+              </p>
             ) : (
-              verifiedTokens.map((token) => (
-                <div key={token.id} className="bg-slate-700/30 rounded-xl p-4 border border-slate-600/50">
+              paginatedTokens.map((token) => (
+                <div key={token.id} className="bg-slate-700/30 rounded-xl p-4 border border-slate-600/50 hover:border-slate-500/50 transition">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold flex-shrink-0">
                         {token.symbol?.charAt(0) || 'T'}
                       </div>
-                      <div>
-                        <h4 className="text-white font-semibold">{token.name}</h4>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-white font-semibold truncate">{token.name}</h4>
                         <p className="text-slate-400 text-sm">{token.symbol}</p>
+                        {token.mint && (
+                          <p className="text-slate-500 text-xs font-mono truncate">{token.mint}</p>
+                        )}
                       </div>
                     </div>
-                    {getStatusBadge('auto_verified')}
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      {token.riskScore !== undefined && (
+                        <div className={`px-3 py-1 rounded-lg text-xs font-medium ${getRiskColor(token.riskScore)}`}>
+                          {token.riskScore}/100
+                        </div>
+                      )}
+                      {getStatusBadge(token.verificationStatus || 'auto_verified')}
+                    </div>
                   </div>
                 </div>
               ))
             )}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-between">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-lg transition text-sm"
+              >
+                Previous
+              </button>
+              <div className="flex items-center gap-2">
+                {[...Array(totalPages)].map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentPage(i + 1)}
+                    className={`w-8 h-8 rounded-lg text-sm font-medium transition ${
+                      currentPage === i + 1
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-lg transition text-sm"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
 
         {/* System Info */}
