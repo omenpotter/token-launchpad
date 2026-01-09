@@ -24,12 +24,14 @@ export function WalletProvider({ children }) {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       try {
-        // Check Backpack first
+        // Check Backpack first - but don't auto-connect on initial load
+        // Users must explicitly click Connect Wallet button
         if (window.backpack) {
           try {
-            // Try to connect silently if previously connected
+            // Only auto-restore if user previously approved
             const resp = await window.backpack.connect({ onlyIfTrusted: true });
             if (resp?.publicKey) {
+              console.log('[X1Space] Restoring previous Backpack connection');
               const result = await web3Service.connectWallet(window.backpack, 'X1Space');
               setWalletAddress(result.address);
               setWalletConnected(true);
@@ -37,7 +39,8 @@ export function WalletProvider({ children }) {
               return;
             }
           } catch (e) {
-            // User hasn't previously connected
+            // No previous connection - user must click Connect button
+            console.log('[X1Space] No previous Backpack connection found');
           }
         }
 
@@ -85,15 +88,20 @@ export function WalletProvider({ children }) {
   const connectBackpack = useCallback(async () => {
     try {
       if (window.backpack) {
+        console.log('[X1Space] Connecting Backpack with explicit approval...');
+        
+        // Force explicit user approval (no silent connect)
         const result = await web3Service.connectWallet(window.backpack, 'X1Space');
         setWalletAddress(result.address);
         setWalletConnected(true);
         setWalletType('backpack');
+        console.log('[X1Space] ✅ Backpack connected:', result.address);
         return { success: true };
       } else {
         return { success: false, error: 'Backpack wallet not found. Please install Backpack from https://backpack.app' };
       }
     } catch (error) {
+      console.error('[X1Space] Backpack connection error:', error);
       return { success: false, error: 'Failed to connect Backpack: ' + error.message };
     }
   }, []);

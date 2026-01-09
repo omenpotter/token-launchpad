@@ -7,6 +7,7 @@ import Minting from './pages/Minting';
 import TokenVerification from './pages/TokenVerification';
 import Trade from './pages/Trade';
 import X1TokenLauncher from './pages/X1TokenLauncher';
+import index from './pages/index';
 import __Layout from './Layout.jsx';
 
 
@@ -20,6 +21,7 @@ export const PAGES = {
     "TokenVerification": TokenVerification,
     "Trade": Trade,
     "X1TokenLauncher": X1TokenLauncher,
+    "index": index,
 }
 
 export const pagesConfig = {
