@@ -55,13 +55,14 @@ export function WalletProvider({ children }) {
           }
         }
 
-        // Check X1 Wallet
-        if (window.okxwallet?.solana) {
+        // Check X1 Wallet (multiple provider locations)
+        let x1Provider = window.x1wallet?.solana || (window.solana?.isX1 && window.solana) || window.okxwallet?.solana;
+        if (x1Provider) {
           try {
             // Try to connect silently if previously connected
-            const resp = await window.okxwallet.solana.connect({ onlyIfTrusted: true });
+            const resp = await x1Provider.connect({ onlyIfTrusted: true });
             if (resp?.publicKey) {
-              const result = await web3Service.connectWallet(window.okxwallet.solana, 'X1Space');
+              const result = await web3Service.connectWallet(x1Provider, 'X1Space');
               setWalletAddress(result.address);
               setWalletConnected(true);
               return;
@@ -110,13 +111,25 @@ export function WalletProvider({ children }) {
 
   const connectX1 = useCallback(async () => {
     try {
-      if (window.okxwallet?.solana) {
-        const result = await web3Service.connectWallet(window.okxwallet.solana, 'X1Space');
+      // X1 Wallet detection - check multiple possible providers
+      let x1Provider = null;
+      
+      // Check common X1 Wallet provider locations
+      if (window.x1wallet?.solana) {
+        x1Provider = window.x1wallet.solana;
+      } else if (window.solana?.isX1) {
+        x1Provider = window.solana;
+      } else if (window.okxwallet?.solana) {
+        x1Provider = window.okxwallet.solana;
+      }
+      
+      if (x1Provider) {
+        const result = await web3Service.connectWallet(x1Provider, 'X1Space');
         setWalletAddress(result.address);
         setWalletConnected(true);
         return { success: true };
       } else {
-        return { success: false, error: 'X1 Wallet not found. Please install X1 Wallet' };
+        return { success: false, error: 'X1 Wallet not found. Please install X1 Wallet extension' };
       }
     } catch (error) {
       return { success: false, error: 'Failed to connect X1 Wallet: ' + error.message };
