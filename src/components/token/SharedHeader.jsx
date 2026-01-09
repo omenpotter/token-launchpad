@@ -10,7 +10,7 @@ const TELEGRAM_ICON = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/objec
 const TWITTER_ICON = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/2e2eecb01_31AGs2bX7mL.png";
 
 export default function SharedHeader() {
-  const { walletConnected, walletAddress, connectBackpack, connectPhantom, disconnectWallet } = useWallet();
+  const { walletConnected, walletAddress, connectBackpack, connectPhantom, connectX1, disconnectWallet } = useWallet();
   const [showWalletModal, setShowWalletModal] = useState(false);
 
   const handleConnectBackpack = async () => {
@@ -24,6 +24,15 @@ export default function SharedHeader() {
 
   const handleConnectPhantom = async () => {
     const result = await connectPhantom();
+    if (result.success) {
+      setShowWalletModal(false);
+    } else {
+      alert(result.error);
+    }
+  };
+
+  const handleConnectX1 = async () => {
+    const result = await connectX1();
     if (result.success) {
       setShowWalletModal(false);
     } else {
@@ -96,6 +105,7 @@ export default function SharedHeader() {
         onClose={() => setShowWalletModal(false)}
         onConnectBackpack={handleConnectBackpack}
         onConnectPhantom={handleConnectPhantom}
+        onConnectX1={handleConnectX1}
       />
     </>
   );

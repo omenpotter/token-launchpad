@@ -2,7 +2,7 @@ import React from 'react';
 import { X, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function WalletConnectModal({ isOpen, onClose, onConnectBackpack, onConnectPhantom }) {
+export default function WalletConnectModal({ isOpen, onClose, onConnectBackpack, onConnectPhantom, onConnectX1 }) {
   if (!isOpen) return null;
 
   return (
@@ -59,6 +59,20 @@ export default function WalletConnectModal({ isOpen, onClose, onConnectBackpack,
               <div className="flex-1 text-left">
                 <p className="font-semibold text-white group-hover:text-blue-300 transition">Phantom</p>
                 <p className="text-sm text-slate-400">Connect to Phantom wallet</p>
+              </div>
+              <ExternalLink className="w-5 h-5 text-slate-500 group-hover:text-blue-400 transition" />
+            </button>
+
+            <button
+              onClick={onConnectX1}
+              className="w-full bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-xl p-4 flex items-center gap-4 transition group"
+            >
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-2xl">
+                🚀
+              </div>
+              <div className="flex-1 text-left">
+                <p className="font-semibold text-white group-hover:text-blue-300 transition">X1 Wallet</p>
+                <p className="text-sm text-slate-400">Connect to X1 Wallet</p>
               </div>
               <ExternalLink className="w-5 h-5 text-slate-500 group-hover:text-blue-400 transition" />
             </button>

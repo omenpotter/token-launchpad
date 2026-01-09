@@ -29,7 +29,7 @@ export function WalletProvider({ children }) {
             // Try to connect silently if previously connected
             const resp = await window.backpack.connect({ onlyIfTrusted: true });
             if (resp?.publicKey) {
-              const result = await web3Service.connectWallet(window.backpack, 'X1Space Launcher');
+              const result = await web3Service.connectWallet(window.backpack, 'X1Space');
               setWalletAddress(result.address);
               setWalletConnected(true);
               return;
@@ -45,7 +45,23 @@ export function WalletProvider({ children }) {
             // Try to connect silently if previously connected
             const resp = await window.phantom.solana.connect({ onlyIfTrusted: true });
             if (resp?.publicKey) {
-              const result = await web3Service.connectWallet(window.phantom.solana, 'X1Space Launcher');
+              const result = await web3Service.connectWallet(window.phantom.solana, 'X1Space');
+              setWalletAddress(result.address);
+              setWalletConnected(true);
+              return;
+            }
+          } catch (e) {
+            // User hasn't previously connected
+          }
+        }
+
+        // Check X1 Wallet
+        if (window.okxwallet?.solana) {
+          try {
+            // Try to connect silently if previously connected
+            const resp = await window.okxwallet.solana.connect({ onlyIfTrusted: true });
+            if (resp?.publicKey) {
+              const result = await web3Service.connectWallet(window.okxwallet.solana, 'X1Space');
               setWalletAddress(result.address);
               setWalletConnected(true);
               return;
@@ -65,7 +81,7 @@ export function WalletProvider({ children }) {
   const connectBackpack = useCallback(async () => {
     try {
       if (window.backpack) {
-        const result = await web3Service.connectWallet(window.backpack, 'X1Space Launcher');
+        const result = await web3Service.connectWallet(window.backpack, 'X1Space');
         setWalletAddress(result.address);
         setWalletConnected(true);
         return { success: true };
@@ -80,7 +96,7 @@ export function WalletProvider({ children }) {
   const connectPhantom = useCallback(async () => {
     try {
       if (window.phantom?.solana) {
-        const result = await web3Service.connectWallet(window.phantom.solana, 'X1Space Launcher');
+        const result = await web3Service.connectWallet(window.phantom.solana, 'X1Space');
         setWalletAddress(result.address);
         setWalletConnected(true);
         return { success: true };
@@ -89,6 +105,21 @@ export function WalletProvider({ children }) {
       }
     } catch (error) {
       return { success: false, error: 'Failed to connect Phantom: ' + error.message };
+    }
+  }, []);
+
+  const connectX1 = useCallback(async () => {
+    try {
+      if (window.okxwallet?.solana) {
+        const result = await web3Service.connectWallet(window.okxwallet.solana, 'X1Space');
+        setWalletAddress(result.address);
+        setWalletConnected(true);
+        return { success: true };
+      } else {
+        return { success: false, error: 'X1 Wallet not found. Please install X1 Wallet' };
+      }
+    } catch (error) {
+      return { success: false, error: 'Failed to connect X1 Wallet: ' + error.message };
     }
   }, []);
 
@@ -105,6 +136,7 @@ export function WalletProvider({ children }) {
     setNetwork,
     connectBackpack,
     connectPhantom,
+    connectX1,
     disconnectWallet
   };
 
