@@ -33,15 +33,16 @@ class SolanaWeb3Service {
   }
 
   // Initialize connection
-  initConnection(network) {
+  initConnection(network, appName = 'X1Space') {
     this.network = network;
+    this.appName = appName;
     const config = NETWORK_CONFIG[network];
     this.connection = new Connection(config.rpcUrl, 'confirmed');
     return this.connection;
   }
 
   // Connect wallet (for Phantom, Backpack, etc.)
-  async connectWallet(walletAdapter, appName = 'X1Space Launcher') {
+  async connectWallet(walletAdapter, appName = 'X1Space') {
     try {
       if (!walletAdapter) {
         throw new Error('No wallet adapter provided');
