@@ -214,7 +214,7 @@ export default function MintingPage() {
             <div className="mt-8">
               <h3 className="text-lg font-semibold text-white mb-4">Platform Token Analytics</h3>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
+                <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
                   <Zap className="w-5 h-5 text-purple-400" />
@@ -227,96 +227,97 @@ export default function MintingPage() {
               <p className="text-xs text-slate-500">Tokens with fair minting enabled</p>
             </div>
 
-            <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-blue-400" />
+                <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-400">Presale Tokens</p>
+                      <p className="text-2xl font-bold text-white">{presaleTokens.length}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500">Tokens in presale mode</p>
                 </div>
-                <div>
-                  <p className="text-sm text-slate-400">Presale Tokens</p>
-                  <p className="text-2xl font-bold text-white">{presaleTokens.length}</p>
-                </div>
-              </div>
-              <p className="text-xs text-slate-500">Tokens in presale mode</p>
-            </div>
 
-            <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                  <Layers className="w-5 h-5 text-amber-400" />
+                <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                      <Layers className="w-5 h-5 text-amber-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-400">Other Tokens</p>
+                      <p className="text-2xl font-bold text-white">{otherTokens.length}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500">Regular tokens not in minting</p>
                 </div>
-                <div>
-                  <p className="text-sm text-slate-400">Other Tokens</p>
-                  <p className="text-2xl font-bold text-white">{otherTokens.length}</p>
-                </div>
-              </div>
-              <p className="text-xs text-slate-500">Regular tokens not in minting</p>
-            </div>
 
-            <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
-                  <Coins className="w-5 h-5 text-green-400" />
+                <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
+                      <Coins className="w-5 h-5 text-green-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-400">Total Tokens</p>
+                      <p className="text-2xl font-bold text-white">{totalTokens}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500">Fair Mint + Presale + Other</p>
                 </div>
-                <div>
-                  <p className="text-sm text-slate-400">Total Tokens</p>
-                  <p className="text-2xl font-bold text-white">{totalTokens}</p>
-                </div>
-              </div>
-              <p className="text-xs text-slate-500">Fair Mint + Presale + Other</p>
               </div>
 
               {/* Token Breakdown */}
               <div className="mt-6 bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
-            <h4 className="text-sm font-medium text-slate-300 mb-4">Token Distribution</h4>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-                  <span className="text-sm text-slate-400">Fair Mint Tokens</span>
-                </div>
-                <span className="text-sm font-medium text-white">
-                  {fairMintTokens.length} ({totalTokens > 0 ? ((fairMintTokens.length / totalTokens) * 100).toFixed(1) : 0}%)
-                </span>
-              </div>
-              <div className="w-full bg-slate-700 rounded-full h-2">
-                <div 
-                  className="bg-purple-500 h-2 rounded-full transition-all" 
-                  style={{ width: `${totalTokens > 0 ? (fairMintTokens.length / totalTokens) * 100 : 0}%` }}
-                ></div>
-              </div>
+                <h4 className="text-sm font-medium text-slate-300 mb-4">Token Distribution</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                      <span className="text-sm text-slate-400">Fair Mint Tokens</span>
+                    </div>
+                    <span className="text-sm font-medium text-white">
+                      {fairMintTokens.length} ({totalTokens > 0 ? ((fairMintTokens.length / totalTokens) * 100).toFixed(1) : 0}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-700 rounded-full h-2">
+                    <div 
+                      className="bg-purple-500 h-2 rounded-full transition-all" 
+                      style={{ width: `${totalTokens > 0 ? (fairMintTokens.length / totalTokens) * 100 : 0}%` }}
+                    ></div>
+                  </div>
 
-              <div className="flex items-center justify-between mt-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                  <span className="text-sm text-slate-400">Presale Tokens</span>
-                </div>
-                <span className="text-sm font-medium text-white">
-                  {presaleTokens.length} ({totalTokens > 0 ? ((presaleTokens.length / totalTokens) * 100).toFixed(1) : 0}%)
-                </span>
-              </div>
-              <div className="w-full bg-slate-700 rounded-full h-2">
-                <div 
-                  className="bg-blue-500 h-2 rounded-full transition-all" 
-                  style={{ width: `${totalTokens > 0 ? (presaleTokens.length / totalTokens) * 100 : 0}%` }}
-                ></div>
-              </div>
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                      <span className="text-sm text-slate-400">Presale Tokens</span>
+                    </div>
+                    <span className="text-sm font-medium text-white">
+                      {presaleTokens.length} ({totalTokens > 0 ? ((presaleTokens.length / totalTokens) * 100).toFixed(1) : 0}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-700 rounded-full h-2">
+                    <div 
+                      className="bg-blue-500 h-2 rounded-full transition-all" 
+                      style={{ width: `${totalTokens > 0 ? (presaleTokens.length / totalTokens) * 100 : 0}%` }}
+                    ></div>
+                  </div>
 
-              <div className="flex items-center justify-between mt-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-                  <span className="text-sm text-slate-400">Other Tokens</span>
-                </div>
-                <span className="text-sm font-medium text-white">
-                  {otherTokens.length} ({totalTokens > 0 ? ((otherTokens.length / totalTokens) * 100).toFixed(1) : 0}%)
-                </span>
-              </div>
-              <div className="w-full bg-slate-700 rounded-full h-2">
-                <div 
-                  className="bg-amber-500 h-2 rounded-full transition-all" 
-                  style={{ width: `${totalTokens > 0 ? (otherTokens.length / totalTokens) * 100 : 0}%` }}
-                ></div>
-              </div>
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                      <span className="text-sm text-slate-400">Other Tokens</span>
+                    </div>
+                    <span className="text-sm font-medium text-white">
+                      {otherTokens.length} ({totalTokens > 0 ? ((otherTokens.length / totalTokens) * 100).toFixed(1) : 0}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-700 rounded-full h-2">
+                    <div 
+                      className="bg-amber-500 h-2 rounded-full transition-all" 
+                      style={{ width: `${totalTokens > 0 ? (otherTokens.length / totalTokens) * 100 : 0}%` }}
+                    ></div>
+                  </div>
                 </div>
               </div>
             </div>
