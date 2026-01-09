@@ -24,7 +24,17 @@ export default function WalletConnectModal({ isOpen, onClose, onConnectBackpack,
         >
           {/* Header */}
           <div className="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-white">Connect Wallet</h3>
+            <div className="flex items-center gap-3">
+              <img 
+                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/5910381b6_711323c7-8ae9-4314-922d-ccab7986c619.jpg" 
+                alt="X1Space" 
+                className="w-8 h-8 rounded-lg"
+              />
+              <div>
+                <h3 className="text-lg font-semibold text-white">X1Space</h3>
+                <p className="text-xs text-slate-400">Connect your wallet</p>
+              </div>
+            </div>
             <button
               onClick={onClose}
               className="p-2 hover:bg-slate-700/50 rounded-lg transition"
