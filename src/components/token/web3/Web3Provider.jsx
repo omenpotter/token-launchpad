@@ -52,15 +52,7 @@ class SolanaWeb3Service {
 
       // Connect if not already connected
       if (!walletAdapter.connected) {
-        // Try to pass app name for branding
-        const connectOptions = {};
-        
-        // Some wallets support app name/metadata
-        if (walletAdapter.isBackpack) {
-          connectOptions.appName = appName;
-        }
-        
-        await walletAdapter.connect(connectOptions);
+        await walletAdapter.connect();
       }
 
       this.publicKey = walletAdapter.publicKey;

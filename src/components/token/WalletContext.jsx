@@ -29,7 +29,7 @@ export function WalletProvider({ children }) {
             // Try to connect silently if previously connected
             const resp = await window.backpack.connect({ onlyIfTrusted: true });
             if (resp?.publicKey) {
-              const result = await web3Service.connectWallet(window.backpack);
+              const result = await web3Service.connectWallet(window.backpack, 'X1Space Launcher');
               setWalletAddress(result.address);
               setWalletConnected(true);
               return;
@@ -38,14 +38,14 @@ export function WalletProvider({ children }) {
             // User hasn't previously connected
           }
         }
-        
+
         // Check Phantom
         if (window.phantom?.solana) {
           try {
             // Try to connect silently if previously connected
             const resp = await window.phantom.solana.connect({ onlyIfTrusted: true });
             if (resp?.publicKey) {
-              const result = await web3Service.connectWallet(window.phantom.solana);
+              const result = await web3Service.connectWallet(window.phantom.solana, 'X1Space Launcher');
               setWalletAddress(result.address);
               setWalletConnected(true);
               return;
