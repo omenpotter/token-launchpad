@@ -51,16 +51,19 @@ export default function MintingPage() {
     const token = createdTokens.find(t => t.id === parseInt(selectedTokenForMint));
     if (!token) return;
 
+    // Use token's custom minting fee (default to 0 if not set)
+    const userMintFee = token.mintingFee ?? 0;
+
     setApprovalData({
       type: 'direct_mint',
       title: 'Mint Tokens',
-      amount: DIRECT_MINT_FEE,
+      amount: userMintFee,
       currency: 'XNT',
       details: {
         tokenName: token.name,
         tokenSymbol: token.symbol,
         mintAmount,
-        action: 'Mint new tokens'
+        action: userMintFee === 0 ? 'Free Mint' : 'Mint new tokens'
       }
     });
     setShowApprovalModal(true);
@@ -103,7 +106,8 @@ export default function MintingPage() {
         }
       }
       
-      const result = await web3Service.mintTokens(token.mint, mintAmount, token.decimals, DIRECT_MINT_FEE);
+      const userMintFee = token.mintingFee ?? 0;
+      const result = await web3Service.mintTokens(token.mint, mintAmount, token.decimals, userMintFee);
       
       await base44.entities.Token.update(token.id, {
         totalMinted: (token.totalMinted || 0) + mintAmount,
