@@ -4,9 +4,9 @@ import Home from './pages/Home';
 import Launchpad from './pages/Launchpad';
 import LiquidityPool from './pages/LiquidityPool';
 import Minting from './pages/Minting';
+import TokenVerification from './pages/TokenVerification';
 import Trade from './pages/Trade';
 import X1TokenLauncher from './pages/X1TokenLauncher';
-import TokenVerification from './pages/TokenVerification';
 import __Layout from './Layout.jsx';
 
 
@@ -17,9 +17,9 @@ export const PAGES = {
     "Launchpad": Launchpad,
     "LiquidityPool": LiquidityPool,
     "Minting": Minting,
+    "TokenVerification": TokenVerification,
     "Trade": Trade,
     "X1TokenLauncher": X1TokenLauncher,
-    "TokenVerification": TokenVerification,
 }
 
 export const pagesConfig = {

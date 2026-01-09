@@ -132,36 +132,69 @@ export default function MintingPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       <SharedHeader />
 
-      <main className="max-w-6xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">X1Space Launcher</h1>
-            <p className="text-slate-400">Mint, burn, and manage tokens on X1 Mainnet</p>
-          </div>
-          <div className="flex gap-3">
-            <Link
-              to={createPageUrl('CreateToken')}
-              className="inline-flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-xl transition font-medium"
-            >
-              <Plus className="w-5 h-5" />
-              Create Token
-            </Link>
-            <Link
-              to={createPageUrl('Trade')}
-              className="inline-flex items-center gap-2 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition font-medium"
-            >
-              Trade
-            </Link>
-            <Link
-              to={createPageUrl('TokenVerification')}
-              className="inline-flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white rounded-xl transition font-medium"
-            >
-              Token Verification
-            </Link>
-          </div>
-        </div>
-        
-        <MintingTab
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        <div className="flex gap-6">
+          {/* Left Sidebar Navigation */}
+          <aside className="w-64 flex-shrink-0">
+            <div className="sticky top-24 space-y-3">
+              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+                <h3 className="text-sm font-semibold text-slate-400 mb-3 uppercase">Navigation</h3>
+                <nav className="space-y-2">
+                  <Link
+                    to={createPageUrl('CreateToken')}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700/50 text-slate-300 hover:text-white transition"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="text-sm font-medium">Create Token</span>
+                  </Link>
+                  <Link
+                    to={createPageUrl('Dashboard')}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700/50 text-slate-300 hover:text-white transition"
+                  >
+                    <Layers className="w-4 h-4" />
+                    <span className="text-sm font-medium">Dashboard</span>
+                  </Link>
+                  <Link
+                    to={createPageUrl('Launchpad')}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700/50 text-slate-300 hover:text-white transition"
+                  >
+                    <Flame className="w-4 h-4" />
+                    <span className="text-sm font-medium">Launchpad</span>
+                  </Link>
+                  <Link
+                    to={createPageUrl('LiquidityPool')}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700/50 text-slate-300 hover:text-white transition"
+                  >
+                    <Coins className="w-4 h-4" />
+                    <span className="text-sm font-medium">Liquidity Pool</span>
+                  </Link>
+                  <Link
+                    to={createPageUrl('Trade')}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700/50 text-slate-300 hover:text-white transition"
+                  >
+                    <TrendingUp className="w-4 h-4" />
+                    <span className="text-sm font-medium">Trade</span>
+                  </Link>
+                  <Link
+                    to={createPageUrl('TokenVerification')}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700/50 text-slate-300 hover:text-white transition"
+                  >
+                    <Zap className="w-4 h-4" />
+                    <span className="text-sm font-medium">Token Verification</span>
+                  </Link>
+                </nav>
+              </div>
+            </div>
+          </aside>
+
+          {/* Main Content */}
+          <div className="flex-1 min-w-0">
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-white mb-2">X1Space Launcher</h1>
+              <p className="text-slate-400">Mint, burn, and manage tokens on X1 Mainnet</p>
+            </div>
+            
+            <MintingTab
           createdTokens={createdTokens}
           selectedTokenForMint={selectedTokenForMint}
           setSelectedTokenForMint={setSelectedTokenForMint}
@@ -175,10 +208,10 @@ export default function MintingPage() {
           onMint={handleDirectMint}
           onBurn={handleBurn}
           walletAddress={walletAddress}
-        />
+            />
 
-        {/* Token Analytics Section */}
-        <div className="mt-8">
+            {/* Token Analytics Section */}
+            <div className="mt-8">
           <h3 className="text-lg font-semibold text-white mb-4">Platform Token Analytics</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
@@ -284,6 +317,7 @@ export default function MintingPage() {
                   className="bg-amber-500 h-2 rounded-full transition-all" 
                   style={{ width: `${totalTokens > 0 ? (otherTokens.length / totalTokens) * 100 : 0}%` }}
                 ></div>
+              </div>
               </div>
             </div>
           </div>
