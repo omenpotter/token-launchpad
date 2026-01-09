@@ -42,7 +42,7 @@ class SolanaWeb3Service {
     return this.connection;
   }
 
-  // Connect wallet (for Phantom, Backpack, etc.)
+  // Connect wallet with proper branding metadata
   async connectWallet(walletAdapter, appName = 'X1Space') {
     try {
       if (!walletAdapter) {
@@ -52,11 +52,28 @@ class SolanaWeb3Service {
       this.wallet = walletAdapter;
       this.appName = appName;
 
+      // App metadata for wallet branding
+      const appMetadata = {
+        name: 'X1Space',
+        url: window.location.origin,
+        icon: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/5910381b6_711323c7-8ae9-4314-922d-ccab7986c619.jpg'
+      };
+
       if (!walletAdapter.connected) {
         try {
-          await walletAdapter.connect({ appName });
+          // Try with full metadata first (for Backpack)
+          await walletAdapter.connect({ 
+            appName: 'X1Space',
+            ...appMetadata 
+          });
         } catch (e) {
-          await walletAdapter.connect();
+          try {
+            // Fallback: try with just appName (for X1 Wallet)
+            await walletAdapter.connect({ appName: 'X1Space' });
+          } catch (e2) {
+            // Final fallback: no options
+            await walletAdapter.connect();
+          }
         }
       }
 

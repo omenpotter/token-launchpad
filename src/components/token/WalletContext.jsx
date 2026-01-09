@@ -7,6 +7,7 @@ const WalletContext = createContext(null);
 export function WalletProvider({ children }) {
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
+  const [walletType, setWalletType] = useState(''); // 'backpack', 'x1', etc.
   const [network, setNetwork] = useState('x1Mainnet');
   const initialized = useRef(false);
 
@@ -32,6 +33,7 @@ export function WalletProvider({ children }) {
               const result = await web3Service.connectWallet(window.backpack, 'X1Space');
               setWalletAddress(result.address);
               setWalletConnected(true);
+              setWalletType('backpack');
               return;
             }
           } catch (e) {
@@ -65,6 +67,7 @@ export function WalletProvider({ children }) {
               const result = await web3Service.connectWallet(x1Provider, 'X1Space');
               setWalletAddress(result.address);
               setWalletConnected(true);
+              setWalletType('x1');
               return;
             }
           } catch (e) {
@@ -85,6 +88,7 @@ export function WalletProvider({ children }) {
         const result = await web3Service.connectWallet(window.backpack, 'X1Space');
         setWalletAddress(result.address);
         setWalletConnected(true);
+        setWalletType('backpack');
         return { success: true };
       } else {
         return { success: false, error: 'Backpack wallet not found. Please install Backpack from https://backpack.app' };
@@ -111,6 +115,13 @@ export function WalletProvider({ children }) {
 
   const connectX1 = useCallback(async () => {
     try {
+      // Debug: Log what's available
+      console.log('[X1Space] Checking for X1 Wallet...');
+      console.log('[X1Space] window.x1Wallet:', window.x1Wallet);
+      console.log('[X1Space] window.x1:', window.x1);
+      console.log('[X1Space] window.solana:', window.solana);
+      console.log('[X1Space] window.solana?.isX1Wallet:', window.solana?.isX1Wallet);
+      
       // Wait for wallet to inject if not immediately available
       let retries = 0;
       const maxRetries = 10;
@@ -120,27 +131,40 @@ export function WalletProvider({ children }) {
         
         // X1 Wallet detection - based on actual provider.js injection
         if (window.x1Wallet) {
+          console.log('[X1Space] ✅ Found via window.x1Wallet');
           x1Provider = window.x1Wallet;
         } else if (window.x1) {
+          console.log('[X1Space] ✅ Found via window.x1');
           x1Provider = window.x1;
         } else if (window.solana?.isX1Wallet) {
+          console.log('[X1Space] ✅ Found via window.solana.isX1Wallet');
           x1Provider = window.solana;
         }
         
         if (x1Provider) {
+          console.log('[X1Space] Connecting to X1 Wallet...');
           const result = await web3Service.connectWallet(x1Provider, 'X1Space');
           setWalletAddress(result.address);
           setWalletConnected(true);
+          setWalletType('x1');
+          console.log('[X1Space] ✅ Connected successfully');
           return { success: true };
         }
         
         // Wait 100ms before retrying
         await new Promise(resolve => setTimeout(resolve, 100));
         retries++;
+        console.log(`[X1Space] Retry ${retries}/${maxRetries}...`);
       }
       
-      return { success: false, error: 'X1 Wallet not found. Please install the X1 Wallet extension and refresh the page.' };
+      console.error('[X1Space] ❌ X1 Wallet not found after', maxRetries, 'attempts');
+      console.log('[X1Space] Please ensure X1 Wallet extension is installed and enabled');
+      return { 
+        success: false, 
+        error: 'X1 Wallet not detected. Please:\n1. Install X1 Wallet extension\n2. Enable the extension\n3. Refresh this page' 
+      };
     } catch (error) {
+      console.error('[X1Space] Connection error:', error);
       return { success: false, error: 'Failed to connect X1 Wallet: ' + error.message };
     }
   }, []);
@@ -149,6 +173,7 @@ export function WalletProvider({ children }) {
     await web3Service.disconnect();
     setWalletConnected(false);
     setWalletAddress('');
+    setWalletType('');
   }, []);
 
   const value = {
