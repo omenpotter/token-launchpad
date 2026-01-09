@@ -22,14 +22,7 @@ export default function SharedHeader() {
     }
   };
 
-  const handleConnectPhantom = async () => {
-    const result = await connectPhantom();
-    if (result.success) {
-      setShowWalletModal(false);
-    } else {
-      alert(result.error);
-    }
-  };
+
 
   const handleConnectX1 = async () => {
     const result = await connectX1();
@@ -104,7 +97,6 @@ export default function SharedHeader() {
         isOpen={showWalletModal}
         onClose={() => setShowWalletModal(false)}
         onConnectBackpack={handleConnectBackpack}
-        onConnectPhantom={handleConnectPhantom}
         onConnectX1={handleConnectX1}
       />
     </>

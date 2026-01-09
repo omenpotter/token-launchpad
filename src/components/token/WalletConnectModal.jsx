@@ -2,7 +2,7 @@ import React from 'react';
 import { X, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function WalletConnectModal({ isOpen, onClose, onConnectBackpack, onConnectPhantom, onConnectX1 }) {
+export default function WalletConnectModal({ isOpen, onClose, onConnectBackpack, onConnectX1 }) {
   if (!isOpen) return null;
 
   return (

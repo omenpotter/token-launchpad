@@ -19,8 +19,8 @@ export function WalletProvider({ children }) {
     
     // Check for existing wallet connections
     const checkExistingConnection = async () => {
-      // Small delay to let wallet extensions inject
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait longer for wallet extensions to inject
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       try {
         // Check Backpack first
@@ -111,25 +111,35 @@ export function WalletProvider({ children }) {
 
   const connectX1 = useCallback(async () => {
     try {
-      let x1Provider = null;
+      // Wait for wallet to inject if not immediately available
+      let retries = 0;
+      const maxRetries = 10;
       
-      // X1 Wallet detection - based on actual provider.js injection
-      if (window.x1Wallet) {
-        x1Provider = window.x1Wallet;
-      } else if (window.x1) {
-        x1Provider = window.x1;
-      } else if (window.solana?.isX1Wallet) {
-        x1Provider = window.solana;
+      while (retries < maxRetries) {
+        let x1Provider = null;
+        
+        // X1 Wallet detection - based on actual provider.js injection
+        if (window.x1Wallet) {
+          x1Provider = window.x1Wallet;
+        } else if (window.x1) {
+          x1Provider = window.x1;
+        } else if (window.solana?.isX1Wallet) {
+          x1Provider = window.solana;
+        }
+        
+        if (x1Provider) {
+          const result = await web3Service.connectWallet(x1Provider, 'X1Space');
+          setWalletAddress(result.address);
+          setWalletConnected(true);
+          return { success: true };
+        }
+        
+        // Wait 100ms before retrying
+        await new Promise(resolve => setTimeout(resolve, 100));
+        retries++;
       }
       
-      if (x1Provider) {
-        const result = await web3Service.connectWallet(x1Provider, 'X1Space');
-        setWalletAddress(result.address);
-        setWalletConnected(true);
-        return { success: true };
-      } else {
-        return { success: false, error: 'X1 Wallet not found. Please install X1 Wallet extension' };
-      }
+      return { success: false, error: 'X1 Wallet not found. Please install the X1 Wallet extension and refresh the page.' };
     } catch (error) {
       return { success: false, error: 'Failed to connect X1 Wallet: ' + error.message };
     }
