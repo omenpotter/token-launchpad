@@ -36,8 +36,7 @@ export default function MintingPage() {
   const { data: allTokens = [] } = useQuery({
     queryKey: ['allTokens'],
     queryFn: async () => {
-      // Only fetch tokens that are sent for minting (created on this platform)
-      const tokens = await base44.entities.Token.filter({ sentForMinting: true });
+      const tokens = await base44.entities.Token.list();
       return tokens.filter(t => t.network === 'x1Mainnet');
     },
     initialData: []
