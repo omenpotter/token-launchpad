@@ -92,14 +92,12 @@ export default function TokenVerificationPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const tokensPerPage = 10;
 
-  // Fetch verified tokens from database (only show tokens created on this platform)
+  // Fetch verified tokens from database
   const { data: verifiedTokens = [] } = useQuery({
     queryKey: ['verified-tokens'],
     queryFn: async () => {
       const tokens = await base44.entities.Token.list();
-      // Only show tokens that were created on this platform (have creator field)
-      // and are on X1 Mainnet
-      return tokens.filter(t => t.network === 'x1Mainnet' && t.creator);
+      return tokens.filter(t => t.network === 'x1Mainnet');
     },
     initialData: []
   });
