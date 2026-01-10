@@ -13,7 +13,11 @@ class X1RpcService {
   initConnection(network = 'x1Mainnet') {
     this.network = network;
     const config = NETWORK_CONFIG[network];
-    this.connection = new Connection(config.rpcUrl, 'confirmed');
+    
+    // ✅ NEW: Override with XDEX's RPC endpoint for better liquidity detection
+    const rpcUrl = 'https://rpc.blockspeed.io/';
+    
+    this.connection = new Connection(rpcUrl, 'confirmed');
     return this.connection;
   }
 
