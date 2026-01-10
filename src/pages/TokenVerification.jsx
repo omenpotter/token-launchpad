@@ -127,7 +127,7 @@ export default function TokenVerificationPage() {
     setCurrentPage(1);
   }, [searchQuery, filterRisk]);
 
-  // ✅ UPDATED: handleVerify with liquidity detection
+  // ✅ FIXED: handleVerify with proper response handling and liquidity detection
   const handleVerify = async () => {
     if (!mintAddress.trim()) {
       alert('Please enter a token mint address');
@@ -136,33 +136,41 @@ export default function TokenVerificationPage() {
 
     setVerifying(true);
     try {
+      // Call backend verification
       const result = await base44.functions.invoke('verifyToken', {
         mintAddress: mintAddress.trim(),
         network: 'x1Mainnet'
       });
       
-      // ✅ NEW: Get liquidity data using LiquidityDetectionService
+      // ✅ FIX: Backend returns data directly, not wrapped in result.data
+      const backendData = result.data || result;
+      
+      // Get liquidity data using client-side X1RpcService
       console.log('[TokenVerification] Checking liquidity for:', mintAddress.trim());
       const liquidityData = await verifyTokenLiquidity(mintAddress.trim());
       const liquidityFormatted = formatLiquidityResult(liquidityData);
       
-      // ✅ Merge liquidity info into result
-      result.data.liquidity = liquidityFormatted;
-      result.data.liquidityRaw = liquidityData;
-      result.data.checks = {
-        ...result.data.checks,
-        hasLiquidity: liquidityFormatted.display.includes('Yes'),
-        lpStatus: liquidityFormatted.status,
-        poolCount: liquidityFormatted.poolCount,
-        pools: liquidityFormatted.pools,
-        totalLiquidity: liquidityFormatted.totalLiquidity,
-        liquiditySource: liquidityFormatted.source,
-        liquidityConfidence: liquidityData.confidence
+      // ✅ FIX: Merge backend data with liquidity info
+      const finalResult = {
+        ...backendData,
+        liquidity: liquidityFormatted,
+        liquidityRaw: liquidityData,
+        checks: {
+          ...backendData.checks,
+          hasLiquidity: liquidityFormatted.display.includes('Yes'),
+          lpStatus: liquidityFormatted.status,
+          poolCount: liquidityFormatted.poolCount,
+          pools: liquidityFormatted.pools,
+          totalLiquidity: liquidityFormatted.totalLiquidity,
+          liquiditySource: liquidityFormatted.source,
+          liquidityConfidence: liquidityData.confidence
+        }
       };
       
-      setVerificationResult(result.data);
-      console.log('[TokenVerification] Verification complete');
+      setVerificationResult(finalResult);
+      console.log('[TokenVerification] Verification complete:', finalResult);
     } catch (error) {
+      console.error('[TokenVerification] Error:', error);
       alert('Verification failed: ' + error.message);
     } finally {
       setVerifying(false);
@@ -183,7 +191,7 @@ export default function TokenVerificationPage() {
         category: reportCategory
       });
       
-      alert(result.data.message);
+      alert(result.data?.message || result.message || 'Report submitted successfully');
       setShowReportModal(false);
       setReportReason('');
       setReportCategory('suspicious');
@@ -589,7 +597,7 @@ export default function TokenVerificationPage() {
 
               <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 mb-4">
                 <p className="text-xs text-yellow-300">
-                  Reports are reviewed automatically. After {5} reports, the token will be re-analyzed. Abuse of this system may result in restrictions.
+                  Reports are reviewed automatically. After 5 reports, the token will be re-analyzed. Abuse of this system may result in restrictions.
                 </p>
               </div>
 
