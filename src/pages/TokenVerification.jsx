@@ -6,7 +6,6 @@ import { useQuery } from '@tanstack/react-query';
 import SharedHeader from '../components/token/SharedHeader';
 import SharedFooter from '../components/token/SharedFooter';
 import { motion } from 'framer-motion';
-import { verifyTokenLiquidity, formatLiquidityResult } from '@/lib/LiquidityDetectionService'; // ✅ NEW: Import liquidity service
 
 export default function TokenVerificationPage() {
   const [mintAddress, setMintAddress] = useState('');
@@ -58,7 +57,6 @@ export default function TokenVerificationPage() {
     setCurrentPage(1);
   }, [searchQuery, filterRisk]);
 
-  // ✅ UPDATED: handleVerify with liquidity detection
   const handleVerify = async () => {
     if (!mintAddress.trim()) {
       alert('Please enter a token mint address');
@@ -71,25 +69,6 @@ export default function TokenVerificationPage() {
         mintAddress: mintAddress.trim(),
         network: 'x1Mainnet'
       });
-      
-      // ✅ NEW: Get liquidity data using LiquidityDetectionService
-      console.log('[TokenVerification] Checking liquidity for:', mintAddress.trim());
-      const liquidityData = await verifyTokenLiquidity(mintAddress.trim());
-      const liquidityFormatted = formatLiquidityResult(liquidityData);
-      
-      // ✅ Merge liquidity info into result
-      result.data.liquidity = liquidityFormatted;
-      result.data.liquidityRaw = liquidityData;
-      result.data.checks = {
-        ...result.data.checks,
-        hasLiquidity: liquidityFormatted.display.includes('Yes'),
-        lpStatus: liquidityFormatted.status,
-        poolCount: liquidityFormatted.poolCount,
-        pools: liquidityFormatted.pools,
-        totalLiquidity: liquidityFormatted.totalLiquidity,
-        liquiditySource: liquidityFormatted.source,
-        liquidityConfidence: liquidityData.confidence
-      };
       
       setVerificationResult(result.data);
       console.log('[TokenVerification] Verification complete');
