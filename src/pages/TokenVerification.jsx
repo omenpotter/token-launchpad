@@ -61,6 +61,75 @@ export default function TokenVerificationPage() {
     setCurrentPage(1);
   }, [searchQuery, filterRisk]);
 
+  const loadTokenDetails = async (token) => {
+    setMintAddress(token.mint);
+    if (token.verificationData) {
+      setVerificationResult(token.verificationData);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      // Token has no stored data, re-verify it
+      setVerifying(true);
+      try {
+        const result = await base44.functions.invoke('verifyToken', {
+          mintAddress: token.mint,
+          network: 'x1Mainnet'
+        });
+        
+        const liquidityData = await verifyTokenLiquidity(token.mint);
+        const liquidityFormatted = formatLiquidityResult(liquidityData);
+        
+        result.data.liquidity = liquidityFormatted;
+        result.data.liquidityRaw = liquidityData;
+        const hasLiquidity = liquidityFormatted.display.includes('Yes');
+        result.data.checks = {
+          ...result.data.checks,
+          hasLiquidity: hasLiquidity,
+          lpStatus: liquidityFormatted.status,
+          poolCount: liquidityFormatted.poolCount,
+          pools: liquidityFormatted.pools,
+          totalLiquidity: liquidityFormatted.totalLiquidity,
+          liquiditySource: liquidityFormatted.source,
+          liquidityConfidence: liquidityData.confidence
+        };
+        
+        if (hasLiquidity) {
+          result.data.warnings = (result.data.warnings || []).filter(w => !w.includes('No liquidity pool detected'));
+          const liquidityRiskReduction = 25;
+          result.data.riskScore = Math.max(0, result.data.riskScore - liquidityRiskReduction);
+          
+          if (result.data.riskScore <= 20) result.data.status = 'auto_verified';
+          else if (result.data.riskScore <= 50) result.data.status = 'auto_verified';
+          else if (result.data.riskScore <= 80) result.data.status = 'risky';
+          else result.data.status = 'flagged';
+        }
+        
+        setVerificationResult(result.data);
+        
+        // Update token with verification data
+        const now = new Date().toISOString();
+        const verificationHistory = token.verificationHistory || [];
+        verificationHistory.push(now);
+        
+        await base44.entities.Token.update(token.id, {
+          name: result.data.name,
+          symbol: result.data.symbol,
+          verificationStatus: result.data.status,
+          riskScore: result.data.riskScore,
+          lastVerifiedAt: now,
+          verificationHistory: verificationHistory,
+          verificationData: result.data
+        });
+        
+        refetchTokens();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (error) {
+        alert('Failed to load token details: ' + error.message);
+      } finally {
+        setVerifying(false);
+      }
+    }
+  };
+
   const handleVerify = async (forceReVerify = false) => {
     if (!mintAddress.trim()) {
       alert('Please enter a token mint address');
@@ -759,16 +828,7 @@ export default function TokenVerificationPage() {
               paginatedTokens.map((token) => (
                 <button
                   key={token.id}
-                  onClick={async () => {
-                    setMintAddress(token.mint);
-                    if (token.verificationData) {
-                      setVerificationResult(token.verificationData);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    } else {
-                      // If no stored data, re-verify to get it
-                      await handleVerify(true);
-                    }
-                  }}
+                  onClick={() => loadTokenDetails(token)}
                   className="w-full bg-slate-700/30 rounded-xl p-4 border border-slate-600/50 hover:border-blue-500/50 transition cursor-pointer"
                 >
                   <div className="flex items-center justify-between">
