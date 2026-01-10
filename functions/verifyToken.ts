@@ -299,59 +299,97 @@ Deno.serve(async (req) => {
       taxesAreDynamic: taxAnalysis.taxesAreDynamic,
       canChangeTaxes: taxAnalysis.canChangeTaxes,
       
-      // Liquidity - check via XDEX API
+      // Liquidity
       hasLiquidity: false,
       lpStatus: 'checking',
       lockDuration: 'N/A',
       liquidityPools: [],
-      totalLiquidity: 0
+      totalLiquidity: 0,
+      poolDetails: null
     };
 
-    // Fetch XDEX liquidity data
+    // Check for liquidity on-chain using X1 RPC
     try {
-      const xdexResponse = await fetch(`https://app.xdex.xyz/api/liquidity/${mintAddress}`);
-      if (xdexResponse.ok) {
-        const xdexData = await xdexResponse.json();
-        if (xdexData.pools && xdexData.pools.length > 0) {
-          checks.hasLiquidity = true;
-          checks.lpStatus = 'xdex';
-          checks.liquidityPools = xdexData.pools;
-          checks.totalLiquidity = xdexData.totalTVL || 0;
-        }
-      }
-    } catch (xdexError) {
-      console.log('XDEX API check failed, trying on-chain detection');
+      console.log('Checking liquidity for:', mintAddress);
       
-      // Fallback: Check for DEX program interactions on-chain
-      try {
-        const signatures = await rpcCall('getSignaturesForAddress', [mintAddress, { limit: 100 }]);
-        const knownDexPrograms = [
-          'DjVE6JNiYqPL2QXyCUUh8rNjHrbz9hXHNYt99MQ59qw1',
-          'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc',
-          'srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX'
-        ];
-        
+      // Get recent transactions for this token
+      const signatures = await rpcCall('getSignaturesForAddress', [mintAddress, { limit: 100 }]);
+      console.log(`Found ${signatures?.length || 0} transactions`);
+      
+      // Known DEX programs on X1 Network
+      const knownDexPrograms = [
+        'DjVE6JNiYqPL2QXyCUUh8rNjHrbz9hXHNYt99MQ59qw1', // xDEX V1
+        'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc', // Orca Whirlpool
+        'srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX', // Serum
+        '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8', // Raydium AMM
+        'CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK', // Raydium CLMM
+      ];
+      
+      let liquidityFound = false;
+      let poolInfo = null;
+      
+      // Check transactions for DEX interactions
+      if (signatures && signatures.length > 0) {
         for (const sig of signatures.slice(0, 50)) {
           try {
-            const tx = await rpcCall('getTransaction', [sig.signature, { maxSupportedTransactionVersion: 0 }]);
-            if (tx && tx.transaction) {
-              const accounts = tx.transaction.message.accountKeys || [];
-              const involvesDex = accounts.some(acc => knownDexPrograms.includes(acc));
-              
-              if (involvesDex) {
-                checks.hasLiquidity = true;
-                checks.lpStatus = 'on-chain-detected';
-                break;
+            const tx = await rpcCall('getTransaction', [
+              sig.signature, 
+              { 
+                maxSupportedTransactionVersion: 0,
+                encoding: 'jsonParsed'
               }
+            ]);
+            
+            if (tx?.transaction) {
+              const message = tx.transaction.message;
+              const accountKeys = message.accountKeys || [];
+              
+              // Check if transaction involves known DEX programs
+              for (const account of accountKeys) {
+                const accountKey = typeof account === 'string' ? account : account.pubkey;
+                
+                if (knownDexPrograms.includes(accountKey)) {
+                  liquidityFound = true;
+                  
+                  // Try to extract pool details
+                  const instructions = message.instructions || [];
+                  for (const ix of instructions) {
+                    if (ix.program === 'spl-token' || ix.programId === accountKey) {
+                      poolInfo = {
+                        dexProgram: accountKey,
+                        transactionSignature: sig.signature,
+                        timestamp: sig.blockTime,
+                      };
+                      break;
+                    }
+                  }
+                  break;
+                }
+              }
+              
+              if (liquidityFound) break;
             }
           } catch (txError) {
+            console.log('Error fetching tx:', txError.message);
             continue;
           }
         }
-      } catch (onChainError) {
-        console.log('On-chain liquidity detection failed');
       }
-    };
+      
+      if (liquidityFound) {
+        checks.hasLiquidity = true;
+        checks.lpStatus = 'detected';
+        checks.poolDetails = poolInfo;
+        console.log('✓ Liquidity pool detected');
+      } else {
+        checks.lpStatus = 'none';
+        console.log('✗ No liquidity pool found');
+      }
+      
+    } catch (liquidityError) {
+      console.error('Liquidity check error:', liquidityError);
+      checks.lpStatus = 'error';
+    }
 
     // Calculate risk score
     const { score: riskScore, warnings } = calculateRiskScore(checks);
