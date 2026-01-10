@@ -759,10 +759,14 @@ export default function TokenVerificationPage() {
               paginatedTokens.map((token) => (
                 <button
                   key={token.id}
-                  onClick={() => {
+                  onClick={async () => {
                     setMintAddress(token.mint);
                     if (token.verificationData) {
                       setVerificationResult(token.verificationData);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    } else {
+                      // If no stored data, re-verify to get it
+                      await handleVerify(true);
                     }
                   }}
                   className="w-full bg-slate-700/30 rounded-xl p-4 border border-slate-600/50 hover:border-blue-500/50 transition cursor-pointer"
