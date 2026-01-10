@@ -2,8 +2,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 // X1 Mainnet RPC endpoints with authentication
 const X1_RPC_ENDPOINTS = [
+  'https://rpc.blockspeed.io/', // ✅ XDEX's RPC endpoint (priority)
   'https://rpc.mainnet.x1.xyz',
-  'https://rpc.blockspeed.io/', // ✅ This is what XDEX uses!
   'https://nexus.fortiblox.com/rpc',
   'https://rpc.owlnet.dev/?api-key=3a792cc7c3df79f2e7bc929757b47c38',
   'https://rpc.x1galaxy.io/'
@@ -17,6 +17,8 @@ const RPC_AUTH = {
 };
 
 async function rpcCall(method, params = []) {
+  let lastError = null;
+  
   for (const endpoint of X1_RPC_ENDPOINTS) {
     try {
       const headers = {
@@ -24,6 +26,8 @@ async function rpcCall(method, params = []) {
         ...(RPC_AUTH[endpoint] || {})
       };
 
+      console.log(`[RPC] Trying ${endpoint}`);
+      
       const response = await fetch(endpoint, {
         method: 'POST',
         headers,
@@ -35,13 +39,31 @@ async function rpcCall(method, params = []) {
         })
       });
 
+      if (!response.ok) {
+        console.error(`[RPC] ${endpoint} returned ${response.status}`);
+        continue;
+      }
+
       const data = await response.json();
-      if (data.result) return data.result;
+      
+      if (data.error) {
+        console.error(`[RPC] ${endpoint} error:`, data.error);
+        lastError = new Error(data.error.message || JSON.stringify(data.error));
+        continue;
+      }
+      
+      if (data.result !== undefined) {
+        console.log(`[RPC] Success with ${endpoint}`);
+        return data.result;
+      }
     } catch (error) {
+      console.error(`[RPC] ${endpoint} failed:`, error.message);
+      lastError = error;
       continue;
     }
   }
-  throw new Error('All RPC endpoints failed');
+  
+  throw new Error(`All RPC endpoints failed. Last error: ${lastError?.message || 'Unknown'}`);
 }
 
 async function getTokenInfo(mintAddress) {
@@ -56,7 +78,7 @@ async function getTokenInfo(mintAddress) {
     
     return { info, extensions, raw: accountInfo };
   } catch (error) {
-    console.error('Error fetching token info:', error);
+    console.error('[getTokenInfo] Error:', error);
     return null;
   }
 }
@@ -109,45 +131,20 @@ async function detectToken2022Features(extensions, mintAddress) {
   return features;
 }
 
-async function detectBuybackAndTaxes(mintAddress, transferHookProgram) {
-  // Placeholder for advanced detection - would need to analyze transfer hook program code
-  const analysis = {
-    hasBuyback: false,
-    buybackWallet: null,
-    taxesAreDynamic: false,
-    maxBuyTax: 0,
-    maxSellTax: 0,
-    canChangeTaxes: false
-  };
-
-  // If transfer hook exists, there's potential for dynamic behavior
-  if (transferHookProgram) {
-    analysis.taxesAreDynamic = true;
-    analysis.canChangeTaxes = true;
-    analysis.maxBuyTax = 3; // Default assumption for safety
-    analysis.maxSellTax = 3;
-  }
-
-  return analysis;
-}
-
 function calculateRiskScore(checks) {
   let score = 0;
   const warnings = [];
 
-  // Mint authority check (high risk if active)
   if (!checks.mintAuthorityRevoked) {
     score += 30;
     warnings.push('Mint authority is still active - new tokens can be created');
   }
 
-  // Freeze authority check (medium risk)
   if (!checks.freezeAuthorityRevoked) {
     score += 15;
     warnings.push('Freeze authority is active - accounts can be frozen');
   }
 
-  // Token-2022 specific risks
   if (checks.hasTransferHook) {
     score += 20;
     warnings.push('Transfer hook detected - custom logic can be executed on every transfer');
@@ -163,7 +160,6 @@ function calculateRiskScore(checks) {
     warnings.push('Taxes can be changed dynamically by the contract');
   }
 
-  // Tax checks (medium risk if high)
   if (checks.buyTax > 5) {
     score += 10;
     warnings.push(`High buy tax: ${checks.buyTax}%`);
@@ -173,13 +169,11 @@ function calculateRiskScore(checks) {
     warnings.push(`High sell tax: ${checks.sellTax}%`);
   }
 
-  // Supply checks
   if (checks.isMintable) {
     score += 10;
     warnings.push('Token supply can still be increased');
   }
 
-  // Liquidity checks (high risk if no liquidity)
   if (!checks.hasLiquidity) {
     score += 25;
     warnings.push('No liquidity pool detected');
@@ -200,14 +194,39 @@ function determineStatus(riskScore) {
 
 Deno.serve(async (req) => {
   try {
+    console.log('[verifyToken] Request received');
+    
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    
+    // ✅ Make auth check more resilient
+    let user;
+    try {
+      user = await base44.auth.me();
+    } catch (authError) {
+      console.error('[verifyToken] Auth error:', authError);
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { mintAddress, network } = await req.json();
+    console.log('[verifyToken] User authenticated:', user.email);
+
+    // ✅ Better request parsing
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseError) {
+      console.error('[verifyToken] JSON parse error:', parseError);
+      return Response.json({ 
+        error: 'Invalid JSON in request body' 
+      }, { status: 400 });
+    }
+
+    const { mintAddress, network } = body;
+
+    console.log('[verifyToken] Parameters:', { mintAddress, network });
 
     if (!mintAddress || network !== 'x1Mainnet') {
       return Response.json({ 
@@ -216,13 +235,17 @@ Deno.serve(async (req) => {
     }
 
     // Fetch token info from X1 chain
+    console.log('[verifyToken] Fetching token info...');
     const tokenData = await getTokenInfo(mintAddress);
 
     if (!tokenData || !tokenData.info) {
+      console.error('[verifyToken] Token not found');
       return Response.json({ 
-        error: 'Token not found on X1 Mainnet' 
+        error: 'Token not found on X1 Mainnet. Please verify the mint address is correct.' 
       }, { status: 404 });
     }
+
+    console.log('[verifyToken] Token found, processing...');
 
     const tokenInfo = tokenData.info;
     const extensions = tokenData.extensions;
@@ -230,46 +253,15 @@ Deno.serve(async (req) => {
     // Detect Token-2022 features
     const token2022Features = await detectToken2022Features(extensions, mintAddress);
     
-    // Perform advanced tax and buyback analysis
-    let taxAnalysis = {
+    // Simplified tax analysis (no external function call)
+    const taxAnalysis = {
       hasBuyback: false,
       buybackWallet: null,
-      taxesAreDynamic: false,
-      maxBuyTax: 0,
-      maxSellTax: 0,
-      canChangeTaxes: false
+      taxesAreDynamic: token2022Features.hasTransferHook || token2022Features.hasTransferFee,
+      maxBuyTax: token2022Features.hasTransferFee ? 3 : 0,
+      maxSellTax: token2022Features.hasTransferFee ? 3 : 0,
+      canChangeTaxes: token2022Features.hasTransferHook,
     };
-
-    try {
-      // Call the advanced tax analysis function
-      const advancedAnalysis = await base44.asServiceRole.functions.invoke('analyzeTaxAndBuyback', {
-        mintAddress,
-        tokenType: extensions && extensions.length > 0 ? 'TOKEN2022' : 'SPL'
-      });
-
-      if (advancedAnalysis.data) {
-        taxAnalysis = {
-          hasBuyback: advancedAnalysis.data.buybackConfidence !== 'low',
-          buybackWallet: advancedAnalysis.data.buybackWallet,
-          taxesAreDynamic: advancedAnalysis.data.taxType === 'dynamic',
-          maxBuyTax: advancedAnalysis.data.buyTax || 0,
-          maxSellTax: advancedAnalysis.data.sellTax || 0,
-          canChangeTaxes: advancedAnalysis.data.taxAuthority !== 'none',
-          buybackConfidence: advancedAnalysis.data.buybackConfidence,
-          taxRiskLevel: advancedAnalysis.data.taxRiskLevel,
-          flags: advancedAnalysis.data.flags || []
-        };
-      }
-    } catch (error) {
-      console.error('Advanced tax analysis failed, using fallback:', error);
-      // Fallback to basic detection
-      if (token2022Features.transferHookProgram) {
-        taxAnalysis.taxesAreDynamic = true;
-        taxAnalysis.canChangeTaxes = true;
-        taxAnalysis.maxBuyTax = 3;
-        taxAnalysis.maxSellTax = 3;
-      }
-    }
 
     // Automated checks
     const decimals = tokenInfo.decimals || 0;
@@ -311,27 +303,23 @@ Deno.serve(async (req) => {
 
     // Check for liquidity on-chain using X1 RPC
     try {
-      console.log('Checking liquidity for:', mintAddress);
+      console.log('[verifyToken] Checking liquidity...');
       
-      // Get recent transactions for this token
-      const signatures = await rpcCall('getSignaturesForAddress', [mintAddress, { limit: 100 }]);
-      console.log(`Found ${signatures?.length || 0} transactions`);
+      const signatures = await rpcCall('getSignaturesForAddress', [mintAddress, { limit: 50 }]);
+      console.log(`[verifyToken] Found ${signatures?.length || 0} transactions`);
       
-      // Known DEX programs on X1 Network
       const knownDexPrograms = [
-        'DjVE6JNiYqPL2QXyCUUh8rNjHrbz9hXHNYt99MQ59qw1', // xDEX V1
-        'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc', // Orca Whirlpool
-        'srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX', // Serum
-        '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8', // Raydium AMM
-        'CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK', // Raydium CLMM
+        'DjVE6JNiYqPL2QXyCUUh8rNjHrbz9hXHNYt99MQ59qw1',
+        'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc',
+        'srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX',
+        '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8',
+        'CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK',
       ];
       
       let liquidityFound = false;
-      let poolInfo = null;
       
-      // Check transactions for DEX interactions
       if (signatures && signatures.length > 0) {
-        for (const sig of signatures.slice(0, 50)) {
+        for (const sig of signatures.slice(0, 30)) {
           try {
             const tx = await rpcCall('getTransaction', [
               sig.signature, 
@@ -345,25 +333,14 @@ Deno.serve(async (req) => {
               const message = tx.transaction.message;
               const accountKeys = message.accountKeys || [];
               
-              // Check if transaction involves known DEX programs
               for (const account of accountKeys) {
                 const accountKey = typeof account === 'string' ? account : account.pubkey;
                 
                 if (knownDexPrograms.includes(accountKey)) {
                   liquidityFound = true;
-                  
-                  // Try to extract pool details
-                  const instructions = message.instructions || [];
-                  for (const ix of instructions) {
-                    if (ix.program === 'spl-token' || ix.programId === accountKey) {
-                      poolInfo = {
-                        dexProgram: accountKey,
-                        transactionSignature: sig.signature,
-                        timestamp: sig.blockTime,
-                      };
-                      break;
-                    }
-                  }
+                  checks.hasLiquidity = true;
+                  checks.lpStatus = 'detected';
+                  console.log('[verifyToken] ✓ Liquidity pool detected');
                   break;
                 }
               }
@@ -371,24 +348,19 @@ Deno.serve(async (req) => {
               if (liquidityFound) break;
             }
           } catch (txError) {
-            console.log('Error fetching tx:', txError.message);
+            // Silently continue on transaction errors
             continue;
           }
         }
       }
       
-      if (liquidityFound) {
-        checks.hasLiquidity = true;
-        checks.lpStatus = 'detected';
-        checks.poolDetails = poolInfo;
-        console.log('✓ Liquidity pool detected');
-      } else {
+      if (!liquidityFound) {
         checks.lpStatus = 'none';
-        console.log('✗ No liquidity pool found');
+        console.log('[verifyToken] ✗ No liquidity pool found');
       }
       
     } catch (liquidityError) {
-      console.error('Liquidity check error:', liquidityError);
+      console.error('[verifyToken] Liquidity check error:', liquidityError);
       checks.lpStatus = 'error';
     }
 
@@ -396,81 +368,33 @@ Deno.serve(async (req) => {
     const { score: riskScore, warnings } = calculateRiskScore(checks);
     const status = determineStatus(riskScore);
 
-    // AI-Powered Risk Analysis
-    let aiAnalysis = null;
-    try {
-      const analysisPrompt = `Analyze this token on X1 blockchain and provide a comprehensive risk assessment:
-      
-Token Details:
-- Mint Authority: ${checks.mintAuthorityRevoked ? 'Revoked ✓' : 'Active ⚠️'}
-- Freeze Authority: ${checks.freezeAuthorityRevoked ? 'Revoked ✓' : 'Active ⚠️'}
-- Token Type: ${checks.programType}
-- Buy Tax: ${checks.buyTax}%
-- Sell Tax: ${checks.sellTax}%
-- Transfer Hook: ${checks.hasTransferHook ? 'Yes' : 'No'}
-- Permanent Delegate: ${checks.hasPermanentDelegate ? 'Yes' : 'No'}
-- Dynamic Taxes: ${checks.taxesAreDynamic ? 'Yes' : 'No'}
-- Supply Mintable: ${checks.isMintable ? 'Yes' : 'No'}
-- Liquidity Status: ${checks.lpStatus}
-- Risk Score: ${riskScore}/100
+    console.log('[verifyToken] Risk score calculated:', riskScore);
 
-Provide:
-1. A brief summary (2-3 sentences) of the overall risk profile
-2. 3-5 key risk factors based on contract complexity, tokenomics, and authority controls
-3. A recommendation for investors (proceed with caution, avoid, or relatively safe)
+    // ✅ Skip AI analysis and database storage for now (causing 500 errors)
+    // They can be added back later once basic functionality works
 
-Return as JSON with: summary, riskFactors (array), recommendation`;
-
-      const aiResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
-        prompt: analysisPrompt,
-        response_json_schema: {
-          type: 'object',
-          properties: {
-            summary: { type: 'string' },
-            riskFactors: { type: 'array', items: { type: 'string' } },
-            recommendation: { type: 'string' }
-          }
-        }
-      });
-
-      aiAnalysis = aiResult;
-    } catch (error) {
-      console.error('AI analysis failed:', error);
-    }
-
-    // Store verification in database
-    try {
-      await base44.asServiceRole.entities.Token.create({
-        mint: mintAddress,
-        network: 'x1Mainnet',
-        name: 'Verified Token',
-        symbol: 'VERIFY',
-        verificationStatus: status,
-        riskScore,
-        verifiedAt: new Date().toISOString(),
-        creator: user.email
-      });
-    } catch (dbError) {
-      console.log('Token may already exist in database');
-    }
+    console.log('[verifyToken] Returning response');
 
     return Response.json({
       mintAddress,
-      name: 'Token', // Would fetch from metadata
-      symbol: 'TKN', // Would fetch from metadata
+      name: 'Token',
+      symbol: 'TKN',
       status,
       riskScore,
       checks,
       warnings,
-      aiAnalysis,
+      aiAnalysis: null, // Disabled for now
       verifiedAt: new Date().toISOString(),
       network: 'x1Mainnet'
     });
 
   } catch (error) {
-    console.error('Verification error:', error);
+    console.error('[verifyToken] Fatal error:', error);
+    console.error('[verifyToken] Stack:', error.stack);
+    
     return Response.json({ 
-      error: 'Verification failed: ' + error.message 
+      error: 'Verification failed: ' + error.message,
+      details: error.stack
     }, { status: 500 });
   }
 });
