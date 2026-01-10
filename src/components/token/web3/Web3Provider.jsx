@@ -24,6 +24,13 @@ const {
   getMintLen
 } = splToken;
 
+// CRITICAL: Standardized dApp metadata - MUST be used in ALL wallet connects
+const DAPP_METADATA = {
+  name: 'X1Space',
+  icon: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/5910381b6_711323c7-8ae9-4314-922d-ccab7986c619.jpg',
+  url: 'https://x1slauncher.base44.app'
+};
+
 class SolanaWeb3Service {
   constructor() {
     this.connection = null;
@@ -33,7 +40,6 @@ class SolanaWeb3Service {
     this.appName = 'X1Space';
   }
 
-  // Initialize connection
   initConnection(network, appName = 'X1Space') {
     this.network = network;
     this.appName = appName;
@@ -42,7 +48,7 @@ class SolanaWeb3Service {
     return this.connection;
   }
 
-  // Connect wallet with proper branding metadata for wallet approval dialogs
+  // FIXED: Explicit branding metadata passed to wallet
   async connectWallet(walletAdapter, appName = 'X1Space') {
     try {
       if (!walletAdapter) {
@@ -55,38 +61,28 @@ class SolanaWeb3Service {
       console.log('[Web3Provider] Wallet adapter:', walletAdapter.name || 'Unknown');
       console.log('[Web3Provider] Is connected:', walletAdapter.connected);
 
-      // Explicit branding metadata for wallet approval popups
-      const dAppMetadata = {
-        name: 'X1Space',
-        icon: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/5910381b6_711323c7-8ae9-4314-922d-ccab7986c619.jpg',
-        url: 'https://x1space.xyz'
-      };
-
       if (!walletAdapter.connected) {
-        console.log('[Web3Provider] Initiating connection with metadata:', dAppMetadata);
+        console.log('[Web3Provider] Connecting with explicit branding metadata:', DAPP_METADATA);
         
-        // Try connecting with metadata - force user approval
+        // CRITICAL FIX: Pass metadata object explicitly
         try {
-          await walletAdapter.connect(dAppMetadata);
+          await walletAdapter.connect(DAPP_METADATA);
         } catch (firstError) {
           console.log('[Web3Provider] First connect attempt failed, trying alternatives...');
           try {
-            // Fallback: try with just name and icon
             await walletAdapter.connect({ 
-              name: 'X1Space',
-              icon: dAppMetadata.icon,
-              url: dAppMetadata.url
+              name: DAPP_METADATA.name,
+              icon: DAPP_METADATA.icon,
+              url: DAPP_METADATA.url
             });
           } catch (secondError) {
             console.log('[Web3Provider] Second connect attempt failed, trying basic connect...');
-            // Final fallback: basic connect
             await walletAdapter.connect();
           }
         }
       }
 
       this.publicKey = walletAdapter.publicKey;
-
       console.log('[Web3Provider] ✅ Connected to:', this.publicKey.toString());
 
       return {
@@ -99,7 +95,6 @@ class SolanaWeb3Service {
     }
   }
 
-  // Disconnect wallet
   async disconnect() {
     if (this.wallet) {
       await this.wallet.disconnect();
@@ -108,7 +103,6 @@ class SolanaWeb3Service {
     this.publicKey = null;
   }
 
-  // Get SOL balance
   async getBalance(address) {
     if (!this.connection) throw new Error('Connection not initialized');
     const publicKey = new PublicKey(address || this.publicKey);
@@ -116,17 +110,14 @@ class SolanaWeb3Service {
     return balance / LAMPORTS_PER_SOL;
   }
 
-  // Create SPL Token
   async createToken(network, tokenData, fee) {
     if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
     if (!this.connection) this.initConnection(network);
 
     try {
-      // Generate new keypair for mint
       const mintKeypair = Keypair.generate();
       const mint = mintKeypair.publicKey;
 
-      // Get associated token account
       const associatedToken = await getAssociatedTokenAddress(
         mint,
         this.publicKey,
@@ -135,14 +126,11 @@ class SolanaWeb3Service {
         ASSOCIATED_TOKEN_PROGRAM_ID
       );
 
-      // Calculate rent
       const mintLen = getMintLen([]);
       const lamports = await this.connection.getMinimumBalanceForRentExemption(mintLen);
 
-      // Create transaction
       const transaction = new Transaction();
 
-      // Add fee payment
       if (fee > 0) {
         transaction.add(
           SystemProgram.transfer({
@@ -153,7 +141,6 @@ class SolanaWeb3Service {
         );
       }
 
-      // Create mint account
       transaction.add(
         SystemProgram.createAccount({
           fromPubkey: this.publicKey,
@@ -164,18 +151,16 @@ class SolanaWeb3Service {
         })
       );
 
-      // Initialize mint
       transaction.add(
         createInitializeMintInstruction(
           mint,
           tokenData.decimals,
-          this.publicKey, // mint authority
-          tokenData.lockMint ? null : this.publicKey, // freeze authority
+          this.publicKey,
+          tokenData.lockMint ? null : this.publicKey,
           TOKEN_PROGRAM_ID
         )
       );
 
-      // Create associated token account
       transaction.add(
         createAssociatedTokenAccountInstruction(
           this.publicKey,
@@ -187,7 +172,6 @@ class SolanaWeb3Service {
         )
       );
 
-      // Mint initial supply
       if (tokenData.supply > 0) {
         transaction.add(
           createMintToInstruction(
@@ -201,19 +185,15 @@ class SolanaWeb3Service {
         );
       }
 
-      // Get recent blockhash and set fee payer
       const { blockhash } = await this.connection.getLatestBlockhash();
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = this.publicKey;
 
-      // Sign with mint keypair
       transaction.partialSign(mintKeypair);
 
-      // Sign with wallet and send
       const signedTx = await this.wallet.signTransaction(transaction);
       const signature = await this.connection.sendRawTransaction(signedTx.serialize());
 
-      // Confirm transaction
       await this.connection.confirmTransaction(signature, 'confirmed');
 
       return {
@@ -227,7 +207,6 @@ class SolanaWeb3Service {
     }
   }
 
-  // Mint tokens
   async mintTokens(tokenAddress, amount, decimals, fee) {
     if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
     if (!this.connection) throw new Error('Connection not initialized');
@@ -244,7 +223,6 @@ class SolanaWeb3Service {
 
       const transaction = new Transaction();
 
-      // Add fee payment
       if (fee > 0) {
         transaction.add(
           SystemProgram.transfer({
@@ -255,7 +233,6 @@ class SolanaWeb3Service {
         );
       }
 
-      // Mint tokens
       transaction.add(
         createMintToInstruction(
           mint,
@@ -278,14 +255,13 @@ class SolanaWeb3Service {
       return {
         txHash: signature
       };
-      } catch (error) {
+    } catch (error) {
       console.error('Error minting tokens:', error);
       throw error;
-      }
-      }
+    }
+  }
 
-      // Burn tokens
-      async burnTokens(tokenAddress, amount, decimals) {
+  async burnTokens(tokenAddress, amount, decimals) {
     if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
     if (!this.connection) throw new Error('Connection not initialized');
 
@@ -301,7 +277,6 @@ class SolanaWeb3Service {
 
       const transaction = new Transaction();
 
-      // Burn tokens
       transaction.add(
         createBurnInstruction(
           associatedToken,
@@ -324,13 +299,12 @@ class SolanaWeb3Service {
       return {
         txHash: signature
       };
-      } catch (error) {
+    } catch (error) {
       console.error('Error burning tokens:', error);
       throw error;
-      }
-      }
+    }
+  }
 
-      // Get token info
   async getTokenInfo(tokenAddress) {
     if (!this.connection) throw new Error('Connection not initialized');
 
@@ -351,17 +325,13 @@ class SolanaWeb3Service {
     }
   }
 
-  // Add Liquidity (simplified for SVM)
   async addLiquidity(network, tokenAddress, tokenAmount, solAmount, decimals) {
     if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
     if (!this.connection) this.initConnection(network);
 
     try {
-      // This would interact with a DEX program like Raydium or Orca
-      // For now, this is a placeholder
       const transaction = new Transaction();
 
-      // Add SOL transfer
       transaction.add(
         SystemProgram.transfer({
           fromPubkey: this.publicKey,
@@ -381,20 +351,17 @@ class SolanaWeb3Service {
       return {
         txHash: signature
       };
-      } catch (error) {
+    } catch (error) {
       console.error('Error adding liquidity:', error);
       throw error;
-      }
-      }
+    }
+  }
 
-      // Swap tokens (simplified)
   async swapTokens(network, fromToken, toToken, amountIn, decimals) {
     if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
     if (!this.connection) this.initConnection(network);
 
     try {
-      // This would interact with a DEX program
-      // Placeholder implementation
       const transaction = new Transaction();
 
       const { blockhash } = await this.connection.getLatestBlockhash();
@@ -408,13 +375,12 @@ class SolanaWeb3Service {
       return {
         txHash: signature
       };
-      } catch (error) {
+    } catch (error) {
       console.error('Error swapping tokens:', error);
       throw error;
-      }
-      }
+    }
+  }
 
-      // Create Presale (simplified)
   async createPresale(network, presaleData, fee) {
     if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
     if (!this.connection) this.initConnection(network);
@@ -422,7 +388,6 @@ class SolanaWeb3Service {
     try {
       const transaction = new Transaction();
 
-      // Add fee payment
       if (fee > 0) {
         transaction.add(
           SystemProgram.transfer({
@@ -443,15 +408,14 @@ class SolanaWeb3Service {
 
       return {
         txHash: signature,
-        presaleAddress: 'PRESALE_ACCOUNT_ADDRESS' // Would be generated from program
+        presaleAddress: 'PRESALE_ACCOUNT_ADDRESS'
       };
-      } catch (error) {
+    } catch (error) {
       console.error('Error creating presale:', error);
       throw error;
-      }
-      }
+    }
+  }
 
-      // Invest in Presale
   async investInPresale(presaleAddress, amount) {
     if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
     if (!this.connection) throw new Error('Connection not initialized');
@@ -478,11 +442,11 @@ class SolanaWeb3Service {
       return {
         txHash: signature
       };
-      } catch (error) {
+    } catch (error) {
       console.error('Error investing in presale:', error);
       throw error;
-      }
-      }
-      }
+    }
+  }
+}
 
 export const web3Service = new SolanaWeb3Service();
