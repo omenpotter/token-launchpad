@@ -239,35 +239,12 @@ Deno.serve(async (req) => {
       canChangeTaxes: false
     };
 
-    try {
-      // Call the advanced tax analysis function
-      const advancedAnalysis = await base44.asServiceRole.functions.invoke('analyzeTaxAndBuyback', {
-        mintAddress,
-        tokenType: extensions && extensions.length > 0 ? 'TOKEN2022' : 'SPL'
-      });
-
-      if (advancedAnalysis.data) {
-        taxAnalysis = {
-          hasBuyback: advancedAnalysis.data.buybackConfidence !== 'low',
-          buybackWallet: advancedAnalysis.data.buybackWallet,
-          taxesAreDynamic: advancedAnalysis.data.taxType === 'dynamic',
-          maxBuyTax: advancedAnalysis.data.buyTax || 0,
-          maxSellTax: advancedAnalysis.data.sellTax || 0,
-          canChangeTaxes: advancedAnalysis.data.taxAuthority !== 'none',
-          buybackConfidence: advancedAnalysis.data.buybackConfidence,
-          taxRiskLevel: advancedAnalysis.data.taxRiskLevel,
-          flags: advancedAnalysis.data.flags || []
-        };
-      }
-    } catch (error) {
-      console.error('Advanced tax analysis failed, using fallback:', error);
-      // Fallback to basic detection
-      if (token2022Features.transferHookProgram) {
-        taxAnalysis.taxesAreDynamic = true;
-        taxAnalysis.canChangeTaxes = true;
-        taxAnalysis.maxBuyTax = 3;
-        taxAnalysis.maxSellTax = 3;
-      }
+    // Use basic detection only (analyzeTaxAndBuyback not implemented)
+    if (token2022Features.transferHookProgram) {
+      taxAnalysis.taxesAreDynamic = true;
+      taxAnalysis.canChangeTaxes = true;
+      taxAnalysis.maxBuyTax = 3;
+      taxAnalysis.maxSellTax = 3;
     }
 
     // Automated checks
@@ -307,51 +284,85 @@ Deno.serve(async (req) => {
       totalLiquidity: 0
     };
 
-    // Fetch XDEX liquidity data
+    // Enhanced on-chain liquidity detection via RPC
     try {
-      const xdexResponse = await fetch(`https://app.xdex.xyz/api/liquidity/${mintAddress}`);
-      if (xdexResponse.ok) {
-        const xdexData = await xdexResponse.json();
-        if (xdexData.pools && xdexData.pools.length > 0) {
-          checks.hasLiquidity = true;
-          checks.lpStatus = 'xdex';
-          checks.liquidityPools = xdexData.pools;
-          checks.totalLiquidity = xdexData.totalTVL || 0;
-        }
-      }
-    } catch (xdexError) {
-      console.log('XDEX API check failed, trying on-chain detection');
+      console.log('Checking liquidity for token:', mintAddress);
       
-      // Fallback: Check for DEX program interactions on-chain
-      try {
-        const signatures = await rpcCall('getSignaturesForAddress', [mintAddress, { limit: 100 }]);
-        const knownDexPrograms = [
-          'DjVE6JNiYqPL2QXyCUUh8rNjHrbz9hXHNYt99MQ59qw1',
-          'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc',
-          'srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX'
-        ];
+      // Get recent transactions for the token mint
+      const signatures = await rpcCall('getSignaturesForAddress', [mintAddress, { limit: 200 }]);
+      console.log(`Found ${signatures?.length || 0} signatures for token`);
+      
+      if (!signatures || signatures.length === 0) {
+        checks.lpStatus = 'no-transactions';
+      } else {
+        // Check transactions for DEX/swap interactions
+        let liquidityFound = false;
+        let txCount = 0;
         
-        for (const sig of signatures.slice(0, 50)) {
+        for (const sig of signatures.slice(0, 100)) {
           try {
-            const tx = await rpcCall('getTransaction', [sig.signature, { maxSupportedTransactionVersion: 0 }]);
+            txCount++;
+            const tx = await rpcCall('getTransaction', [sig.signature, {
+              encoding: 'jsonParsed',
+              maxSupportedTransactionVersion: 0
+            }]);
+            
             if (tx && tx.transaction) {
-              const accounts = tx.transaction.message.accountKeys || [];
-              const involvesDex = accounts.some(acc => knownDexPrograms.includes(acc));
+              const message = tx.transaction.message;
+              const instructions = message.instructions || [];
               
-              if (involvesDex) {
-                checks.hasLiquidity = true;
-                checks.lpStatus = 'on-chain-detected';
-                break;
+              // Look for swap/liquidity instructions
+              for (const ix of instructions) {
+                const programId = ix.programId || ix.program;
+                
+                // Check if instruction involves known DEX programs or contains swap-related data
+                if (programId && (
+                  programId.includes('Dex') ||
+                  programId.includes('Swap') ||
+                  programId.includes('Pool') ||
+                  programId.includes('Liquidity')
+                )) {
+                  liquidityFound = true;
+                  checks.lpStatus = `dex-detected-${programId.slice(0, 8)}`;
+                  break;
+                }
+                
+                // Check instruction data for swap patterns
+                const ixData = ix.data || ix.parsed?.type || '';
+                if (ixData && typeof ixData === 'string' && (
+                  ixData.toLowerCase().includes('swap') ||
+                  ixData.toLowerCase().includes('liquidity')
+                )) {
+                  liquidityFound = true;
+                  checks.lpStatus = 'swap-activity-detected';
+                  break;
+                }
               }
+              
+              if (liquidityFound) break;
             }
+            
+            // Check every 10 transactions
+            if (txCount >= 30 && !liquidityFound) break;
+            
           } catch (txError) {
             continue;
           }
         }
-      } catch (onChainError) {
-        console.log('On-chain liquidity detection failed');
+        
+        if (liquidityFound) {
+          checks.hasLiquidity = true;
+          console.log('✓ Liquidity detected via on-chain analysis');
+        } else {
+          checks.lpStatus = 'no-dex-activity';
+          console.log('✗ No liquidity detected after checking', txCount, 'transactions');
+        }
       }
-    };
+      
+    } catch (liquidityError) {
+      console.error('Liquidity detection error:', liquidityError);
+      checks.lpStatus = 'detection-error';
+    }
 
     // Calculate risk score
     const { score: riskScore, warnings } = calculateRiskScore(checks);

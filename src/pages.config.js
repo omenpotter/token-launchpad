@@ -3,11 +3,11 @@ import Dashboard from './pages/Dashboard';
 import Home from './pages/Home';
 import Launchpad from './pages/Launchpad';
 import LiquidityPool from './pages/LiquidityPool';
-import Minting from './pages/Minting';
-import TokenVerification from './pages/TokenVerification';
 import Trade from './pages/Trade';
 import X1TokenLauncher from './pages/X1TokenLauncher';
 import index from './pages/index';
+import Minting from './pages/Minting';
+import TokenVerification from './pages/TokenVerification';
 import __Layout from './Layout.jsx';
 
 
@@ -17,15 +17,15 @@ export const PAGES = {
     "Home": Home,
     "Launchpad": Launchpad,
     "LiquidityPool": LiquidityPool,
-    "Minting": Minting,
-    "TokenVerification": TokenVerification,
     "Trade": Trade,
     "X1TokenLauncher": X1TokenLauncher,
     "index": index,
+    "Minting": Minting,
+    "TokenVerification": TokenVerification,
 }
 
 export const pagesConfig = {
-    mainPage: "Minting",  // ✅ FIXED: Changed from "X1TokenLauncher" to "Minting"
+    mainPage: "X1TokenLauncher",
     Pages: PAGES,
     Layout: __Layout,
 };
