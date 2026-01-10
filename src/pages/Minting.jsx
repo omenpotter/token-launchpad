@@ -37,7 +37,7 @@ export default function MintingPage() {
     queryKey: ['allTokens'],
     queryFn: async () => {
       const tokens = await base44.entities.Token.list();
-      return tokens.filter(t => t.network === 'x1Mainnet');
+      return tokens.filter(t => t.network === 'x1Mainnet' && !t.verificationStatus);
     },
     initialData: []
   });
