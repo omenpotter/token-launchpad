@@ -126,11 +126,12 @@ export default function MintingPage() {
     }
   };
 
-  // Token Analytics
-  const fairMintTokens = allTokens.filter(t => t.sentForMinting && t.fairMint);
-  const presaleTokens = allTokens.filter(t => t.sentForMinting && !t.fairMint);
-  const otherTokens = allTokens.filter(t => !t.sentForMinting);
-  const totalTokens = allTokens.length;
+  // Token Analytics - only count tokens created on this platform
+  const platformTokens = allTokens.filter(t => t.creator); // Only tokens with creator (created here)
+  const fairMintTokens = platformTokens.filter(t => t.sentForMinting && t.fairMint);
+  const presaleTokens = platformTokens.filter(t => t.sentForMinting && !t.fairMint);
+  const otherTokens = platformTokens.filter(t => !t.sentForMinting);
+  const totalTokens = platformTokens.length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
