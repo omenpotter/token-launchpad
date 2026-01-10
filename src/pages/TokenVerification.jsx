@@ -92,9 +92,10 @@ export default function TokenVerificationPage() {
       // Merge liquidity info into result
       result.data.liquidity = liquidityFormatted;
       result.data.liquidityRaw = liquidityData;
+      const hasLiquidity = liquidityFormatted.display.includes('Yes');
       result.data.checks = {
         ...result.data.checks,
-        hasLiquidity: liquidityFormatted.display.includes('Yes'),
+        hasLiquidity: hasLiquidity,
         lpStatus: liquidityFormatted.status,
         poolCount: liquidityFormatted.poolCount,
         pools: liquidityFormatted.pools,
@@ -102,6 +103,22 @@ export default function TokenVerificationPage() {
         liquiditySource: liquidityFormatted.source,
         liquidityConfidence: liquidityData.confidence
       };
+      
+      // Recalculate risk score based on liquidity
+      if (hasLiquidity) {
+        // Remove liquidity warning if liquidity was found
+        result.data.warnings = (result.data.warnings || []).filter(w => !w.includes('No liquidity pool detected'));
+        
+        // Reduce risk score if liquidity detected
+        const liquidityRiskReduction = 25;
+        result.data.riskScore = Math.max(0, result.data.riskScore - liquidityRiskReduction);
+        
+        // Update status based on new risk score
+        if (result.data.riskScore <= 20) result.data.status = 'auto_verified';
+        else if (result.data.riskScore <= 50) result.data.status = 'auto_verified';
+        else if (result.data.riskScore <= 80) result.data.status = 'risky';
+        else result.data.status = 'flagged';
+      }
       
       setVerificationResult(result.data);
       
@@ -738,26 +755,33 @@ export default function TokenVerificationPage() {
               </p>
             ) : (
               paginatedTokens.map((token) => (
-                <div key={token.id} className="bg-slate-700/30 rounded-xl p-4 border border-slate-600/50 hover:border-slate-500/50 transition">
+                <button
+                  key={token.id}
+                  onClick={async () => {
+                    setMintAddress(token.mint);
+                    await handleVerify(true);
+                  }}
+                  className="w-full bg-slate-700/30 rounded-xl p-4 border border-slate-600/50 hover:border-blue-500/50 transition cursor-pointer"
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold flex-shrink-0">
                         {token.symbol?.charAt(0) || 'T'}
                       </div>
-                      <div className="min-w-0 flex-1">
-                       <h4 className="text-white font-semibold truncate">{token.name}</h4>
-                       <p className="text-slate-400 text-sm">{token.symbol}</p>
-                       {token.mint && (
-                         <p className="text-slate-500 text-xs font-mono truncate">{token.mint}</p>
-                       )}
-                       {token.verifiedAt && (
-                         <div className="flex gap-2 mt-1 text-xs text-slate-500">
-                           <span>Verified: {new Date(token.verifiedAt).toLocaleDateString()}</span>
-                           {token.lastVerifiedAt && token.lastVerifiedAt !== token.verifiedAt && (
-                             <span>• Updated: {new Date(token.lastVerifiedAt).toLocaleDateString()}</span>
-                           )}
-                         </div>
-                       )}
+                       <div className="min-w-0 flex-1 text-left">
+                        <h4 className="text-white font-semibold truncate">{token.name}</h4>
+                        <p className="text-slate-400 text-sm">{token.symbol}</p>
+                        {token.mint && (
+                          <p className="text-slate-500 text-xs font-mono truncate">{token.mint}</p>
+                        )}
+                        {token.verifiedAt && (
+                          <div className="flex gap-2 mt-1 text-xs text-slate-500">
+                            <span>Verified: {new Date(token.verifiedAt).toLocaleDateString()}</span>
+                            {token.lastVerifiedAt && token.lastVerifiedAt !== token.verifiedAt && (
+                              <span>• Updated: {new Date(token.lastVerifiedAt).toLocaleDateString()}</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
@@ -769,7 +793,7 @@ export default function TokenVerificationPage() {
                       {getStatusBadge(token.verificationStatus || 'auto_verified')}
                     </div>
                   </div>
-                </div>
+                </button>
               ))
             )}
           </div>

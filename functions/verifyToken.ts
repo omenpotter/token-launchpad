@@ -174,7 +174,7 @@ function calculateRiskScore(checks) {
     warnings.push('Token supply can still be increased');
   }
 
-  if (!checks.hasLiquidity) {
+  if (checks.hasLiquidity === false && checks.lpStatus !== 'checking') {
     score += 25;
     warnings.push('No liquidity pool detected');
   } else if (checks.lpStatus === 'unlocked') {
