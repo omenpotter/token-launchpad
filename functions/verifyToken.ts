@@ -271,12 +271,16 @@ Deno.serve(async (req) => {
     }
 
     // Automated checks
+    const decimals = tokenInfo.decimals || 0;
+    const rawSupply = parseInt(tokenInfo.supply || 0);
+    const actualSupply = rawSupply / Math.pow(10, decimals);
+    
     const checks = {
       programType: extensions && extensions.length > 0 ? 'Token-2022' : 'SPL Token',
       mintAuthorityRevoked: !tokenInfo.mintAuthority,
       freezeAuthorityRevoked: !tokenInfo.freezeAuthority,
-      totalSupply: parseInt(tokenInfo.supply || 0),
-      decimals: tokenInfo.decimals || 0,
+      totalSupply: actualSupply,
+      decimals: decimals,
       isMintable: !!tokenInfo.mintAuthority,
       supplyRisk: !!tokenInfo.mintAuthority,
       
@@ -295,10 +299,58 @@ Deno.serve(async (req) => {
       taxesAreDynamic: taxAnalysis.taxesAreDynamic,
       canChangeTaxes: taxAnalysis.canChangeTaxes,
       
-      // Liquidity (placeholder - would need DEX analysis)
+      // Liquidity - check via XDEX API
       hasLiquidity: false,
-      lpStatus: 'unknown',
-      lockDuration: 'N/A'
+      lpStatus: 'checking',
+      lockDuration: 'N/A',
+      liquidityPools: [],
+      totalLiquidity: 0
+    };
+
+    // Fetch XDEX liquidity data
+    try {
+      const xdexResponse = await fetch(`https://app.xdex.xyz/api/liquidity/${mintAddress}`);
+      if (xdexResponse.ok) {
+        const xdexData = await xdexResponse.json();
+        if (xdexData.pools && xdexData.pools.length > 0) {
+          checks.hasLiquidity = true;
+          checks.lpStatus = 'xdex';
+          checks.liquidityPools = xdexData.pools;
+          checks.totalLiquidity = xdexData.totalTVL || 0;
+        }
+      }
+    } catch (xdexError) {
+      console.log('XDEX API check failed, trying on-chain detection');
+      
+      // Fallback: Check for DEX program interactions on-chain
+      try {
+        const signatures = await rpcCall('getSignaturesForAddress', [mintAddress, { limit: 100 }]);
+        const knownDexPrograms = [
+          'DjVE6JNiYqPL2QXyCUUh8rNjHrbz9hXHNYt99MQ59qw1',
+          'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc',
+          'srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX'
+        ];
+        
+        for (const sig of signatures.slice(0, 50)) {
+          try {
+            const tx = await rpcCall('getTransaction', [sig.signature, { maxSupportedTransactionVersion: 0 }]);
+            if (tx && tx.transaction) {
+              const accounts = tx.transaction.message.accountKeys || [];
+              const involvesDex = accounts.some(acc => knownDexPrograms.includes(acc));
+              
+              if (involvesDex) {
+                checks.hasLiquidity = true;
+                checks.lpStatus = 'on-chain-detected';
+                break;
+              }
+            }
+          } catch (txError) {
+            continue;
+          }
+        }
+      } catch (onChainError) {
+        console.log('On-chain liquidity detection failed');
+      }
     };
 
     // Calculate risk score
