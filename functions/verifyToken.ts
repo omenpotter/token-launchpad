@@ -3,6 +3,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 // X1 Mainnet RPC endpoints with authentication
 const X1_RPC_ENDPOINTS = [
   'https://rpc.mainnet.x1.xyz',
+  'https://rpc.blockspeed.io/', // ✅ This is what XDEX uses!
   'https://nexus.fortiblox.com/rpc',
   'https://rpc.owlnet.dev/?api-key=3a792cc7c3df79f2e7bc929757b47c38',
   'https://rpc.x1galaxy.io/'
