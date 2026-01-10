@@ -408,20 +408,25 @@ Return as JSON with: summary, riskFactors (array), recommendation`;
       console.error('AI analysis failed:', error);
     }
 
-    // Store verification in database
+    // Store verification data in database without creating duplicate tokens
     try {
-      await base44.asServiceRole.entities.Token.create({
-        mint: mintAddress,
-        network: 'x1Mainnet',
-        name: 'Verified Token',
-        symbol: 'VERIFY',
-        verificationStatus: status,
-        riskScore,
-        verifiedAt: new Date().toISOString(),
-        creator: user.email
-      });
+      // Check if token already exists
+      const existingTokens = await base44.asServiceRole.entities.Token.filter({ mint: mintAddress });
+      
+      if (existingTokens.length > 0) {
+        // Update existing token verification data
+        await base44.asServiceRole.entities.Token.update(existingTokens[0].id, {
+          verificationStatus: status,
+          riskScore,
+          verifiedAt: new Date().toISOString()
+        });
+      } else {
+        // Only create if it's a token created on this platform (has creator field)
+        // Don't auto-create tokens from verification page
+        console.log('Token not found in database - verification data not persisted');
+      }
     } catch (dbError) {
-      console.log('Token may already exist in database');
+      console.error('Database update error:', dbError);
     }
 
     return Response.json({
