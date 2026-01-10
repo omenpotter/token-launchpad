@@ -7,134 +7,98 @@ const WalletContext = createContext(null);
 export function WalletProvider({ children }) {
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
-  const [walletType, setWalletType] = useState(''); // 'backpack', 'x1', etc.
+  const [walletType, setWalletType] = useState('');
   const [network, setNetwork] = useState('x1Mainnet');
   const initialized = useRef(false);
 
-  // Check if wallet is already connected on mount
+  // Initialize connection on mount - NO AUTO-CONNECT
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
     
     web3Service.initConnection(network);
     
-    // Check for existing wallet connections
-    const checkExistingConnection = async () => {
-      // Wait for wallet extensions to inject (critical for X1 Wallet)
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      try {
-        // Check Backpack first - but don't auto-connect on initial load
-        // Users must explicitly click Connect Wallet button
-        if (window.backpack) {
-          try {
-            // Only auto-restore if user previously approved
-            const resp = await window.backpack.connect({ onlyIfTrusted: true });
-            if (resp?.publicKey) {
-              console.log('[X1Space] Restoring previous Backpack connection');
-              const result = await web3Service.connectWallet(window.backpack, 'X1Space');
-              setWalletAddress(result.address);
-              setWalletConnected(true);
-              setWalletType('backpack');
-              return;
-            }
-          } catch (e) {
-            // No previous connection - user must click Connect button
-            console.log('[X1Space] No previous Backpack connection found');
-          }
-        }
-
-        // Check Phantom
-        if (window.phantom?.solana) {
-          try {
-            // Try to connect silently if previously connected
-            const resp = await window.phantom.solana.connect({ onlyIfTrusted: true });
-            if (resp?.publicKey) {
-              const result = await web3Service.connectWallet(window.phantom.solana, 'X1Space');
-              setWalletAddress(result.address);
-              setWalletConnected(true);
-              return;
-            }
-          } catch (e) {
-            // User hasn't previously connected
-          }
-        }
-
-        // Check X1 Wallet
-        let x1Provider = window.x1Wallet || window.x1 || (window.solana?.isX1Wallet && window.solana);
-        if (x1Provider) {
-          try {
-            // Try to connect silently if previously connected
-            const resp = await x1Provider.connect({ onlyIfTrusted: true });
-            if (resp?.publicKey) {
-              const result = await web3Service.connectWallet(x1Provider, 'X1Space');
-              setWalletAddress(result.address);
-              setWalletConnected(true);
-              setWalletType('x1');
-              return;
-            }
-          } catch (e) {
-            // User hasn't previously connected
-          }
-        }
-      } catch (error) {
-        console.log('No existing wallet connection found');
-      }
-    };
-
-    checkExistingConnection();
+    // CRITICAL FIX: REMOVED all auto-connect logic
+    // Users MUST explicitly click "Connect Wallet" button
+    // NO onlyIfTrusted checks - they auto-connect without approval popup
+    console.log('[X1Space] WalletProvider initialized - awaiting manual wallet connection');
   }, []);
 
+  // FIXED: Backpack connection with explicit approval popup
   const connectBackpack = useCallback(async () => {
     try {
-      if (window.backpack) {
-        console.log('[X1Space] Connecting Backpack with explicit approval...');
-        
-        // Force explicit user approval (no silent connect)
-        const result = await web3Service.connectWallet(window.backpack, 'X1Space');
-        setWalletAddress(result.address);
-        setWalletConnected(true);
-        setWalletType('backpack');
-        console.log('[X1Space] ✅ Backpack connected:', result.address);
-        return { success: true };
-      } else {
-        return { success: false, error: 'Backpack wallet not found. Please install Backpack from https://backpack.app' };
+      if (!window.backpack) {
+        return { 
+          success: false, 
+          error: 'Backpack wallet not found. Please install Backpack from https://backpack.app' 
+        };
       }
+
+      console.log('[X1Space] Connecting Backpack - forcing explicit user approval...');
+      
+      // CRITICAL FIX: Force explicit connect - NO onlyIfTrusted, NO silent mode
+      // This MUST show the wallet approval popup
+      const result = await web3Service.connectWallet(window.backpack, 'X1Space');
+      
+      setWalletAddress(result.address);
+      setWalletConnected(true);
+      setWalletType('backpack');
+      
+      console.log('[X1Space] ✅ Backpack connected:', result.address);
+      return { success: true };
+      
     } catch (error) {
       console.error('[X1Space] Backpack connection error:', error);
-      return { success: false, error: 'Failed to connect Backpack: ' + error.message };
+      return { 
+        success: false, 
+        error: 'Failed to connect Backpack: ' + error.message 
+      };
     }
   }, []);
 
+  // FIXED: Phantom connection with explicit approval
   const connectPhantom = useCallback(async () => {
     try {
-      if (window.phantom?.solana) {
-        const result = await web3Service.connectWallet(window.phantom.solana, 'X1Space');
-        setWalletAddress(result.address);
-        setWalletConnected(true);
-        return { success: true };
-      } else {
-        return { success: false, error: 'Phantom wallet not found. Please install Phantom from https://phantom.app' };
+      if (!window.phantom?.solana) {
+        return { 
+          success: false, 
+          error: 'Phantom wallet not found. Please install Phantom from https://phantom.app' 
+        };
       }
+
+      console.log('[X1Space] Connecting Phantom - forcing explicit user approval...');
+      
+      // CRITICAL FIX: Force explicit connect - NO onlyIfTrusted
+      const result = await web3Service.connectWallet(window.phantom.solana, 'X1Space');
+      
+      setWalletAddress(result.address);
+      setWalletConnected(true);
+      setWalletType('phantom');
+      
+      console.log('[X1Space] ✅ Phantom connected:', result.address);
+      return { success: true };
+      
     } catch (error) {
-      return { success: false, error: 'Failed to connect Phantom: ' + error.message };
+      console.error('[X1Space] Phantom connection error:', error);
+      return { 
+        success: false, 
+        error: 'Failed to connect Phantom: ' + error.message 
+      };
     }
   }, []);
 
+  // FIXED: X1 Wallet connection with proper branding
   const connectX1 = useCallback(async () => {
     try {
-      console.log('[X1Space] ═══ X1 Wallet Detection Started ═══');
+      console.log('[X1Space] ••• X1 Wallet Detection Started •••');
       
-      // Initial check of all possible injection points
       console.log('[X1Space] window.x1Wallet:', typeof window.x1Wallet, window.x1Wallet?._initialized);
       console.log('[X1Space] window.x1:', typeof window.x1, window.x1?._initialized);
       console.log('[X1Space] window.solana:', typeof window.solana);
       console.log('[X1Space] window.solana?.isX1Wallet:', window.solana?.isX1Wallet);
       
-      // Check for injected event
       console.log('[X1Space] Waiting for X1 Wallet injection...');
       
-      // Listen for injection event
       let injectionDetected = false;
       const injectionListener = () => {
         console.log('[X1Space] 🎯 X1 Wallet injection event detected!');
@@ -142,7 +106,6 @@ export function WalletProvider({ children }) {
       };
       window.addEventListener('x1Wallet#initialized', injectionListener);
       
-      // Wait longer for extension injection (up to 2 seconds)
       let retries = 0;
       const maxRetries = 20;
       const retryDelay = 100;
@@ -150,7 +113,6 @@ export function WalletProvider({ children }) {
       while (retries < maxRetries) {
         let x1Provider = null;
         
-        // Check all injection points
         if (window.x1Wallet?._initialized) {
           console.log('[X1Space] ✅ Found via window.x1Wallet (initialized)');
           x1Provider = window.x1Wallet;
@@ -164,22 +126,28 @@ export function WalletProvider({ children }) {
         
         if (x1Provider) {
           window.removeEventListener('x1Wallet#initialized', injectionListener);
-          console.log('[X1Space] 🔗 Attempting connection...');
+          console.log('[X1Space] 🔗 Attempting connection with explicit branding...');
           
           try {
+            // CRITICAL FIX: Pass metadata to show X1Space branding
             const result = await web3Service.connectWallet(x1Provider, 'X1Space');
+            
             setWalletAddress(result.address);
             setWalletConnected(true);
             setWalletType('x1');
+            
             console.log('[X1Space] ✅ Connected successfully to:', result.address);
             return { success: true };
+            
           } catch (connError) {
             console.error('[X1Space] ❌ Connection failed:', connError);
-            return { success: false, error: 'Connection failed: ' + connError.message };
+            return { 
+              success: false, 
+              error: 'Connection failed: ' + connError.message 
+            };
           }
         }
         
-        // Wait before next retry
         await new Promise(resolve => setTimeout(resolve, retryDelay));
         retries++;
         
@@ -190,7 +158,7 @@ export function WalletProvider({ children }) {
       
       window.removeEventListener('x1Wallet#initialized', injectionListener);
       
-      console.error('[X1Space] ═══ DETECTION FAILED ═══');
+      console.error('[X1Space] ••• DETECTION FAILED •••');
       console.error('[X1Space] Waited', (maxRetries * retryDelay) / 1000, 'seconds');
       console.error('[X1Space] Extension status:');
       console.error('[X1Space] - window.x1Wallet exists:', !!window.x1Wallet);
@@ -208,15 +176,24 @@ export function WalletProvider({ children }) {
       };
     } catch (error) {
       console.error('[X1Space] ❌ Unexpected error:', error);
-      return { success: false, error: 'Unexpected error: ' + error.message };
+      return { 
+        success: false, 
+        error: 'Unexpected error: ' + error.message 
+      };
     }
   }, []);
 
+  // FIXED: Disconnect removes all state
   const disconnectWallet = useCallback(async () => {
-    await web3Service.disconnect();
-    setWalletConnected(false);
-    setWalletAddress('');
-    setWalletType('');
+    try {
+      await web3Service.disconnect();
+      setWalletConnected(false);
+      setWalletAddress('');
+      setWalletType('');
+      console.log('[X1Space] Wallet disconnected');
+    } catch (error) {
+      console.error('[X1Space] Error disconnecting wallet:', error);
+    }
   }, []);
 
   const value = {
