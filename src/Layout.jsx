@@ -3,12 +3,11 @@ import React, { useEffect } from 'react';
 import { WalletProvider } from './components/token/WalletContext';
 
 export default function Layout({ children, currentPageName }) {
-  // Set dApp metadata for wallet branding
   useEffect(() => {
     // Set document title for wallet detection
     document.title = 'X1Space Launcher';
     
-    // Set or update meta tags for dApp identity
+    // Set meta tags for dApp identity
     const setMetaTag = (property, content) => {
       let meta = document.querySelector(`meta[property="${property}"]`) || 
                  document.querySelector(`meta[name="${property}"]`);
@@ -20,7 +19,7 @@ export default function Layout({ children, currentPageName }) {
       meta.setAttribute('content', content);
     };
     
-    // Standard dApp metadata for wallet adapters
+    // Standard dApp metadata
     setMetaTag('og:title', 'X1Space');
     setMetaTag('og:site_name', 'X1Space');
     setMetaTag('og:image', 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/5910381b6_711323c7-8ae9-4314-922d-ccab7986c619.jpg');
