@@ -16,6 +16,9 @@ export default function TokenVerificationPage() {
   const [reportReason, setReportReason] = useState('');
   const [reportCategory, setReportCategory] = useState('suspicious');
   const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [showReVerifyModal, setShowReVerifyModal] = useState(false);
+  const [existingToken, setExistingToken] = useState(null);
+  const [showDropdown, setShowDropdown] = useState(false);
   
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,11 +27,11 @@ export default function TokenVerificationPage() {
   const tokensPerPage = 10;
 
   // Fetch verified tokens from database
-  const { data: verifiedTokens = [] } = useQuery({
+  const { data: verifiedTokens = [], refetch: refetchTokens } = useQuery({
     queryKey: ['verified-tokens'],
     queryFn: async () => {
       const tokens = await base44.entities.Token.list();
-      return tokens.filter(t => t.network === 'x1Mainnet');
+      return tokens.filter(t => t.network === 'x1Mainnet' && t.verifiedAt);
     },
     initialData: []
   });
@@ -58,11 +61,20 @@ export default function TokenVerificationPage() {
     setCurrentPage(1);
   }, [searchQuery, filterRisk]);
 
-  // ✅ UPDATED: handleVerify with liquidity detection
-  const handleVerify = async () => {
+  const handleVerify = async (forceReVerify = false) => {
     if (!mintAddress.trim()) {
       alert('Please enter a token mint address');
       return;
+    }
+
+    // Check if token already verified
+    if (!forceReVerify) {
+      const existing = verifiedTokens.find(t => t.mint?.toLowerCase() === mintAddress.trim().toLowerCase());
+      if (existing) {
+        setExistingToken(existing);
+        setShowReVerifyModal(true);
+        return;
+      }
     }
 
     setVerifying(true);
@@ -72,12 +84,12 @@ export default function TokenVerificationPage() {
         network: 'x1Mainnet'
       });
       
-      // ✅ NEW: Get liquidity data using LiquidityDetectionService
+      // Get liquidity data
       console.log('[TokenVerification] Checking liquidity for:', mintAddress.trim());
       const liquidityData = await verifyTokenLiquidity(mintAddress.trim());
       const liquidityFormatted = formatLiquidityResult(liquidityData);
       
-      // ✅ Merge liquidity info into result
+      // Merge liquidity info into result
       result.data.liquidity = liquidityFormatted;
       result.data.liquidityRaw = liquidityData;
       result.data.checks = {
@@ -92,6 +104,43 @@ export default function TokenVerificationPage() {
       };
       
       setVerificationResult(result.data);
+      
+      // Save or update token in database
+      const existing = verifiedTokens.find(t => t.mint?.toLowerCase() === mintAddress.trim().toLowerCase());
+      const now = new Date().toISOString();
+      
+      if (existing) {
+        // Update existing token
+        const verificationHistory = existing.verificationHistory || [];
+        verificationHistory.push(now);
+        
+        await base44.entities.Token.update(existing.id, {
+          name: result.data.name,
+          symbol: result.data.symbol,
+          verificationStatus: result.data.status,
+          riskScore: result.data.riskScore,
+          lastVerifiedAt: now,
+          verificationHistory: verificationHistory
+        });
+      } else {
+        // Create new token
+        await base44.entities.Token.create({
+          name: result.data.name,
+          symbol: result.data.symbol,
+          mint: mintAddress.trim(),
+          network: 'x1Mainnet',
+          verificationStatus: result.data.status,
+          riskScore: result.data.riskScore,
+          verifiedAt: now,
+          lastVerifiedAt: now,
+          verificationHistory: [now],
+          creator: 'system'
+        });
+      }
+      
+      refetchTokens();
+      setShowReVerifyModal(false);
+      setExistingToken(null);
       console.log('[TokenVerification] Verification complete');
     } catch (error) {
       alert('Verification failed: ' + error.message);
@@ -177,7 +226,49 @@ export default function TokenVerificationPage() {
 
         {/* Verification Input */}
         <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50 mb-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Verify Token</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">Verify Token</h3>
+            <div className="relative">
+              <button
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition text-sm flex items-center gap-2"
+              >
+                <Search className="w-4 h-4" />
+                Verified Tokens ({verifiedTokens.length})
+              </button>
+              {showDropdown && (
+                <div className="absolute right-0 mt-2 w-96 max-h-96 overflow-y-auto bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-50">
+                  {verifiedTokens.length === 0 ? (
+                    <p className="text-slate-400 text-center py-4">No verified tokens</p>
+                  ) : (
+                    verifiedTokens.map((token) => (
+                      <button
+                        key={token.id}
+                        onClick={() => {
+                          setMintAddress(token.mint);
+                          setShowDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-3 hover:bg-slate-700 border-b border-slate-700 last:border-0 transition"
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-white font-medium">{token.name}</p>
+                          {getStatusBadge(token.verificationStatus)}
+                        </div>
+                        <p className="text-slate-400 text-sm">{token.symbol}</p>
+                        <p className="text-slate-500 text-xs font-mono truncate">{token.mint}</p>
+                        <div className="flex gap-3 mt-1 text-xs text-slate-400">
+                          <span>First: {new Date(token.verifiedAt).toLocaleDateString()}</span>
+                          {token.lastVerifiedAt && token.lastVerifiedAt !== token.verifiedAt && (
+                            <span>Last: {new Date(token.lastVerifiedAt).toLocaleDateString()}</span>
+                          )}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
           <div className="flex gap-3">
             <input
               type="text"
@@ -187,7 +278,7 @@ export default function TokenVerificationPage() {
               className="flex-1 bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
             />
             <button
-              onClick={handleVerify}
+              onClick={() => handleVerify(false)}
               disabled={verifying}
               className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 disabled:from-slate-600 disabled:to-slate-600 text-white rounded-xl transition font-medium flex items-center gap-2"
             >
@@ -482,6 +573,69 @@ export default function TokenVerificationPage() {
           </motion.div>
         )}
 
+        {/* Re-Verify Modal */}
+        {showReVerifyModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowReVerifyModal(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-slate-800 rounded-2xl p-6 max-w-md w-full border border-slate-700"
+            >
+              <h3 className="text-xl font-bold text-white mb-4">Token Already Verified</h3>
+              
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-4">
+                <p className="text-sm text-blue-300 mb-3">
+                  This token has already been verified.
+                </p>
+                {existingToken && (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Token:</span>
+                      <span className="text-white font-medium">{existingToken.name} ({existingToken.symbol})</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Initial Verification:</span>
+                      <span className="text-white">{new Date(existingToken.verifiedAt).toLocaleString()}</span>
+                    </div>
+                    {existingToken.lastVerifiedAt && existingToken.lastVerifiedAt !== existingToken.verifiedAt && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Last Verified:</span>
+                        <span className="text-white">{new Date(existingToken.lastVerifiedAt).toLocaleString()}</span>
+                      </div>
+                    )}
+                    {existingToken.verificationHistory && existingToken.verificationHistory.length > 1 && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Re-verifications:</span>
+                        <span className="text-white">{existingToken.verificationHistory.length}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowReVerifyModal(false);
+                    setExistingToken(null);
+                  }}
+                  className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleVerify(true)}
+                  disabled={verifying}
+                  className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 text-white rounded-xl transition"
+                >
+                  {verifying ? 'Re-Verifying...' : 'Re-Verify Token'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {/* Report Modal */}
         {showReportModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -591,11 +745,19 @@ export default function TokenVerificationPage() {
                         {token.symbol?.charAt(0) || 'T'}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-white font-semibold truncate">{token.name}</h4>
-                        <p className="text-slate-400 text-sm">{token.symbol}</p>
-                        {token.mint && (
-                          <p className="text-slate-500 text-xs font-mono truncate">{token.mint}</p>
-                        )}
+                       <h4 className="text-white font-semibold truncate">{token.name}</h4>
+                       <p className="text-slate-400 text-sm">{token.symbol}</p>
+                       {token.mint && (
+                         <p className="text-slate-500 text-xs font-mono truncate">{token.mint}</p>
+                       )}
+                       {token.verifiedAt && (
+                         <div className="flex gap-2 mt-1 text-xs text-slate-500">
+                           <span>Verified: {new Date(token.verifiedAt).toLocaleDateString()}</span>
+                           {token.lastVerifiedAt && token.lastVerifiedAt !== token.verifiedAt && (
+                             <span>• Updated: {new Date(token.lastVerifiedAt).toLocaleDateString()}</span>
+                           )}
+                         </div>
+                       )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
