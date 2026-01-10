@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import SharedHeader from '../components/token/SharedHeader';
 import SharedFooter from '../components/token/SharedFooter';
 import { motion } from 'framer-motion';
-import { verifyTokenLiquidity, formatLiquidityResult } from '@/lib/LiquidityDetectionService'; // ✅ NEW: Import liquidity service
+import { verifyTokenLiquidity, formatLiquidityResult } from '../components/token/LiquidityDetectionService';
 
 export default function TokenVerificationPage() {
   const [mintAddress, setMintAddress] = useState('');
