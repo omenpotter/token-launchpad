@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import SharedHeader from '../components/token/SharedHeader';
 import SharedFooter from '../components/token/SharedFooter';
 import { motion } from 'framer-motion';
+import { verifyTokenLiquidity, formatLiquidityResult } from '@/lib/LiquidityDetectionService'; // ✅ NEW: Import liquidity service
 
 export default function TokenVerificationPage() {
   const [mintAddress, setMintAddress] = useState('');
@@ -57,6 +58,7 @@ export default function TokenVerificationPage() {
     setCurrentPage(1);
   }, [searchQuery, filterRisk]);
 
+  // ✅ UPDATED: handleVerify with liquidity detection
   const handleVerify = async () => {
     if (!mintAddress.trim()) {
       alert('Please enter a token mint address');
@@ -70,7 +72,27 @@ export default function TokenVerificationPage() {
         network: 'x1Mainnet'
       });
       
+      // ✅ NEW: Get liquidity data using LiquidityDetectionService
+      console.log('[TokenVerification] Checking liquidity for:', mintAddress.trim());
+      const liquidityData = await verifyTokenLiquidity(mintAddress.trim());
+      const liquidityFormatted = formatLiquidityResult(liquidityData);
+      
+      // ✅ Merge liquidity info into result
+      result.data.liquidity = liquidityFormatted;
+      result.data.liquidityRaw = liquidityData;
+      result.data.checks = {
+        ...result.data.checks,
+        hasLiquidity: liquidityFormatted.display.includes('Yes'),
+        lpStatus: liquidityFormatted.status,
+        poolCount: liquidityFormatted.poolCount,
+        pools: liquidityFormatted.pools,
+        totalLiquidity: liquidityFormatted.totalLiquidity,
+        liquiditySource: liquidityFormatted.source,
+        liquidityConfidence: liquidityData.confidence
+      };
+      
       setVerificationResult(result.data);
+      console.log('[TokenVerification] Verification complete');
     } catch (error) {
       alert('Verification failed: ' + error.message);
     } finally {
@@ -302,7 +324,7 @@ export default function TokenVerificationPage() {
                 </div>
               </div>
 
-              {/* Liquidity & Lock */}
+              {/* ✅ UPDATED: Liquidity & Lock - Now shows X1 XDEX liquidity data */}
               <div className="bg-slate-700/30 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Droplets className="w-5 h-5 text-cyan-400" />
@@ -317,19 +339,69 @@ export default function TokenVerificationPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">LP Status:</span>
-                    <span className="text-white">
-                      {verificationResult.checks?.lpStatus || 'Unknown'}
+                    <span className="text-white capitalize">
+                      {verificationResult.checks?.lpStatus === 'xdex' ? 'XDEX Pool' :
+                       verificationResult.checks?.lpStatus === 'x1-verified' ? 'X1 Verified' :
+                       verificationResult.checks?.lpStatus || 'Unknown'}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Lock Duration:</span>
-                    <span className="text-white">
-                      {verificationResult.checks?.lockDuration || 'N/A'}
+                    <span className="text-slate-400">Source:</span>
+                    <span className="text-slate-300 text-xs">{verificationResult.checks?.liquiditySource}</span>
+                  </div>
+                  {verificationResult.checks?.poolCount > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Pool Count:</span>
+                      <span className="text-white">{verificationResult.checks.poolCount}</span>
+                    </div>
+                  )}
+                  {verificationResult.checks?.totalLiquidity > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Total Liquidity:</span>
+                      <span className="text-white">${verificationResult.checks.totalLiquidity.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between pt-2 border-t border-slate-600/50">
+                    <span className="text-slate-400">Confidence:</span>
+                    <span className={`text-sm font-semibold ${verificationResult.checks?.liquidityConfidence >= 80 ? 'text-green-400' : verificationResult.checks?.liquidityConfidence >= 50 ? 'text-yellow-400' : 'text-orange-400'}`}>
+                      {verificationResult.checks?.liquidityConfidence || 0}%
                     </span>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* ✅ NEW: XDEX Pools Details Section */}
+            {verificationResult.checks?.pools && verificationResult.checks.pools.length > 0 && (
+              <div className="mt-4 bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Droplets className="w-5 h-5 text-cyan-400" />
+                  <h4 className="font-semibold text-cyan-400">XDEX Liquidity Pools</h4>
+                </div>
+                <div className="space-y-3">
+                  {verificationResult.checks.pools.map((pool, idx) => (
+                    <div key={idx} className="bg-slate-700/50 rounded-lg p-3 text-sm">
+                      <div className="flex justify-between mb-2">
+                        <span className="text-slate-300">Pool {idx + 1}</span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          pool.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
+                        }`}>
+                          {pool.status?.toUpperCase() || 'ACTIVE'}
+                        </span>
+                      </div>
+                      <div className="space-y-1 text-slate-400">
+                        <p className="font-mono text-xs truncate">Address: {pool.address}</p>
+                        <div className="flex justify-between text-xs">
+                          <span>Liquidity: ${(pool.liquidity || 0).toLocaleString()}</span>
+                          <span>24h Vol: ${(pool.volume24h || 0).toLocaleString()}</span>
+                        </div>
+                        {pool.fee && <p className="text-xs">Fee: {pool.fee}%</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Token-2022 Features */}
             {verificationResult.checks?.hasTransferHook && (
