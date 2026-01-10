@@ -6,76 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import SharedHeader from '../components/token/SharedHeader';
 import SharedFooter from '../components/token/SharedFooter';
 import { motion } from 'framer-motion';
-import { x1RpcService } from '../components/token/web3/X1RpcService';
-
-async function verifyTokenLiquidity(mintAddress) {
-  try {
-    const supply = await x1RpcService.getTokenSupply(mintAddress);
-    const signatures = await x1RpcService.getSignaturesForAddress(mintAddress, { limit: 100 });
-    
-    const knownDexPrograms = [
-      'DjVE6JNiYqPL2QXyCUUh8rNjHrbz9hXHNYt99MQ59qw1',
-      'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc',
-      'srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX',
-    ];
-    
-    const liquidityPools = [];
-    
-    for (const sig of signatures) {
-      try {
-        const tx = await x1RpcService.getTransaction(sig.signature);
-        if (!tx) continue;
-        
-        const accounts = tx.transaction.message.accountKeys || [];
-        const involvesDex = accounts.some(acc => 
-          knownDexPrograms.includes(acc.toString())
-        );
-        
-        if (involvesDex) {
-          liquidityPools.push({
-            address: sig.signature.slice(0, 20) + '...',
-            status: 'active',
-            liquidity: Math.random() * 50000 + 10000,
-            volume24h: Math.random() * 20000 + 5000,
-            fee: 0.3
-          });
-        }
-      } catch (err) {
-        console.warn('Error processing transaction:', err);
-      }
-    }
-    
-    return {
-      hasLiquidity: liquidityPools.length > 0,
-      liquidityPools: liquidityPools.slice(0, 5),
-      totalSupply: supply.amount,
-      decimals: supply.decimals,
-      transactionCount: signatures.length,
-      confidence: liquidityPools.length > 0 ? 85 : 50
-    };
-  } catch (error) {
-    console.error('Error detecting liquidity:', error);
-    return {
-      hasLiquidity: false,
-      liquidityPools: [],
-      confidence: 0
-    };
-  }
-}
-
-function formatLiquidityResult(liquidityData) {
-  const hasLiquidity = liquidityData.hasLiquidity;
-  const pools = liquidityData.liquidityPools || [];
-  
-  return {
-    display: hasLiquidity ? 'Yes ✓' : 'No ⚠️',
-    status: hasLiquidity ? 'xdex' : 'no-pool',
-    poolCount: pools.length,
-    pools: pools,
-    totalLiquidity: pools.reduce((sum, pool) => sum + (pool.liquidity || 0), 0),
-    source: hasLiquidity ? 'X1 XDEX on-chain data' : 'No pools detected'
-  };
-}
+import { verifyTokenLiquidity, formatLiquidityResult } from '@/lib/LiquidityDetectionService'; // ✅ NEW: Import liquidity service
 
 export default function TokenVerificationPage() {
   const [mintAddress, setMintAddress] = useState('');
@@ -127,7 +58,7 @@ export default function TokenVerificationPage() {
     setCurrentPage(1);
   }, [searchQuery, filterRisk]);
 
-  // ✅ FIXED: handleVerify with proper response handling and liquidity detection
+  // ✅ UPDATED: handleVerify with liquidity detection
   const handleVerify = async () => {
     if (!mintAddress.trim()) {
       alert('Please enter a token mint address');
@@ -136,41 +67,33 @@ export default function TokenVerificationPage() {
 
     setVerifying(true);
     try {
-      // Call backend verification
       const result = await base44.functions.invoke('verifyToken', {
         mintAddress: mintAddress.trim(),
         network: 'x1Mainnet'
       });
       
-      // ✅ FIX: Backend returns data directly, not wrapped in result.data
-      const backendData = result.data || result;
-      
-      // Get liquidity data using client-side X1RpcService
+      // ✅ NEW: Get liquidity data using LiquidityDetectionService
       console.log('[TokenVerification] Checking liquidity for:', mintAddress.trim());
       const liquidityData = await verifyTokenLiquidity(mintAddress.trim());
       const liquidityFormatted = formatLiquidityResult(liquidityData);
       
-      // ✅ FIX: Merge backend data with liquidity info
-      const finalResult = {
-        ...backendData,
-        liquidity: liquidityFormatted,
-        liquidityRaw: liquidityData,
-        checks: {
-          ...backendData.checks,
-          hasLiquidity: liquidityFormatted.display.includes('Yes'),
-          lpStatus: liquidityFormatted.status,
-          poolCount: liquidityFormatted.poolCount,
-          pools: liquidityFormatted.pools,
-          totalLiquidity: liquidityFormatted.totalLiquidity,
-          liquiditySource: liquidityFormatted.source,
-          liquidityConfidence: liquidityData.confidence
-        }
+      // ✅ Merge liquidity info into result
+      result.data.liquidity = liquidityFormatted;
+      result.data.liquidityRaw = liquidityData;
+      result.data.checks = {
+        ...result.data.checks,
+        hasLiquidity: liquidityFormatted.display.includes('Yes'),
+        lpStatus: liquidityFormatted.status,
+        poolCount: liquidityFormatted.poolCount,
+        pools: liquidityFormatted.pools,
+        totalLiquidity: liquidityFormatted.totalLiquidity,
+        liquiditySource: liquidityFormatted.source,
+        liquidityConfidence: liquidityData.confidence
       };
       
-      setVerificationResult(finalResult);
-      console.log('[TokenVerification] Verification complete:', finalResult);
+      setVerificationResult(result.data);
+      console.log('[TokenVerification] Verification complete');
     } catch (error) {
-      console.error('[TokenVerification] Error:', error);
       alert('Verification failed: ' + error.message);
     } finally {
       setVerifying(false);
@@ -191,7 +114,7 @@ export default function TokenVerificationPage() {
         category: reportCategory
       });
       
-      alert(result.data?.message || result.message || 'Report submitted successfully');
+      alert(result.data.message);
       setShowReportModal(false);
       setReportReason('');
       setReportCategory('suspicious');
@@ -597,7 +520,7 @@ export default function TokenVerificationPage() {
 
               <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 mb-4">
                 <p className="text-xs text-yellow-300">
-                  Reports are reviewed automatically. After 5 reports, the token will be re-analyzed. Abuse of this system may result in restrictions.
+                  Reports are reviewed automatically. After {5} reports, the token will be re-analyzed. Abuse of this system may result in restrictions.
                 </p>
               </div>
 
