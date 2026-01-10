@@ -137,7 +137,8 @@ export default function TokenVerificationPage() {
           verificationStatus: result.data.status,
           riskScore: result.data.riskScore,
           lastVerifiedAt: now,
-          verificationHistory: verificationHistory
+          verificationHistory: verificationHistory,
+          verificationData: result.data
         });
       } else {
         // Create new token
@@ -151,7 +152,8 @@ export default function TokenVerificationPage() {
           verifiedAt: now,
           lastVerifiedAt: now,
           verificationHistory: [now],
-          creator: 'system'
+          creator: 'system',
+          verificationData: result.data
         });
       }
       
@@ -757,9 +759,11 @@ export default function TokenVerificationPage() {
               paginatedTokens.map((token) => (
                 <button
                   key={token.id}
-                  onClick={async () => {
+                  onClick={() => {
                     setMintAddress(token.mint);
-                    await handleVerify(true);
+                    if (token.verificationData) {
+                      setVerificationResult(token.verificationData);
+                    }
                   }}
                   className="w-full bg-slate-700/30 rounded-xl p-4 border border-slate-600/50 hover:border-blue-500/50 transition cursor-pointer"
                 >
