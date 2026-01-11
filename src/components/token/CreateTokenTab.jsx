@@ -76,22 +76,12 @@ export default function CreateTokenTab({
           
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">Token Type</label>
-            <div className="flex gap-3">
-              <label className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border cursor-pointer transition ${tokenType === 'SPL' ? 'bg-blue-500/20 border-blue-500 text-blue-300' : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'}`}>
-                <input type="radio" name="tokenType" value="SPL" checked={tokenType === 'SPL'} onChange={(e) => setTokenType(e.target.value)} className="sr-only" />
-                <Coins className="w-4 h-4" />
-                SPL Token
-              </label>
-              <label className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border cursor-pointer transition ${tokenType === 'TOKEN2022' ? 'bg-blue-500/20 border-blue-500 text-blue-300' : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'}`}>
-                <input type="radio" name="tokenType" value="TOKEN2022" checked={tokenType === 'TOKEN2022'} onChange={(e) => setTokenType(e.target.value)} className="sr-only" />
-                <Zap className="w-4 h-4" />
-                Token 2022
-              </label>
+            <div className="w-full bg-blue-500/20 border border-blue-500 text-blue-300 rounded-xl px-4 py-3 flex items-center justify-center gap-2">
+              <Zap className="w-5 h-5" />
+              <span className="font-medium">Token 2022</span>
             </div>
             <p className="text-xs text-slate-400 mt-2">
-              {tokenType === 'SPL' 
-                ? '📌 Standard SPL: Simple, widely supported, metadata via Metaplex'
-                : '✨ Token-2022: Advanced features - on-chain metadata, transfer fees, extensions'}
+              ✨ Advanced features: On-chain metadata, transfer fees, extensions
             </p>
           </div>
         </div>
