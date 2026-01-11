@@ -280,17 +280,8 @@ class SolanaWeb3Service {
         extensions.push(ExtensionType.NonTransferable);
       }
 
-      // Calculate space needed for metadata
-      const metadataLen = extensions.includes(ExtensionType.MetadataPointer) ? 
-        TYPE_SIZE + LENGTH_SIZE + pack({
-          mint: mint,
-          name: tokenData.name || 'Unknown',
-          symbol: tokenData.symbol || 'UNK',
-          uri: metadataUri || '',
-          additionalMetadata: []
-        }).length : 0;
-
-      const mintLen = getMintLen(extensions) + metadataLen;
+      // Only allocate space for extensions, NOT metadata content
+      const mintLen = getMintLen(extensions);
       const lamports = await this.connection.getMinimumBalanceForRentExemption(mintLen);
 
       const transaction = new Transaction();
@@ -352,7 +343,7 @@ class SolanaWeb3Service {
         );
       }
 
-      // Initialize mint BEFORE metadata
+      // Initialize mint
       transaction.add(
         createInitializeMint2Instruction(
           mint,
@@ -362,22 +353,6 @@ class SolanaWeb3Service {
           TOKEN_2022_PROGRAM_ID
         )
       );
-
-      // Initialize metadata IN SAME TRANSACTION
-      if (extensions.includes(ExtensionType.MetadataPointer)) {
-        transaction.add(
-          createInitializeInstruction({
-            programId: TOKEN_2022_PROGRAM_ID,
-            metadata: mint,
-            updateAuthority: this.publicKey,
-            mint: mint,
-            mintAuthority: this.publicKey,
-            name: tokenData.name || 'Unknown',
-            symbol: tokenData.symbol || 'UNK',
-            uri: metadataUri || ''
-          })
-        );
-      }
 
       const associatedToken = await getAssociatedTokenAddress(
         mint,
@@ -438,10 +413,47 @@ class SolanaWeb3Service {
 
       await this.connection.confirmTransaction(signature, 'confirmed');
 
+      // Initialize metadata in SEPARATE transaction after mint is created
+      let metadataTxHash = null;
+      if (extensions.includes(ExtensionType.MetadataPointer) && (metadataUri || tokenData.name)) {
+        try {
+          const metadataTransaction = new Transaction();
+          
+          metadataTransaction.add(
+            createInitializeInstruction({
+              programId: TOKEN_2022_PROGRAM_ID,
+              metadata: mint,
+              updateAuthority: this.publicKey,
+              mint: mint,
+              mintAuthority: this.publicKey,
+              name: tokenData.name || 'Unknown',
+              symbol: tokenData.symbol || 'UNK',
+              uri: metadataUri || ''
+            })
+          );
+
+          const { blockhash: metadataBlockhash } = await this.connection.getLatestBlockhash();
+          metadataTransaction.recentBlockhash = metadataBlockhash;
+          metadataTransaction.feePayer = this.publicKey;
+
+          const signedMetadataTx = await this.wallet.signTransaction(metadataTransaction);
+          metadataTxHash = await this.connection.sendRawTransaction(signedMetadataTx.serialize(), {
+            skipPreflight: false,
+            maxRetries: 3
+          });
+          
+          await this.connection.confirmTransaction(metadataTxHash, 'confirmed');
+          console.log('✅ Metadata initialized:', metadataTxHash);
+        } catch (metadataError) {
+          console.warn('⚠️ Failed to initialize Token-2022 metadata (token created successfully):', metadataError);
+        }
+      }
+
       return {
         txHash: signature,
         tokenAddress: mint.toString(),
         associatedTokenAccount: associatedToken.toString(),
+        metadataTxHash,
         tokenType: 'TOKEN2022'
       };
     } catch (error) {
