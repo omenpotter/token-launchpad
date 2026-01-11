@@ -370,51 +370,6 @@ class SolanaWeb3Service {
         );
       }
 
-      const associatedToken = await getAssociatedTokenAddress(
-        mint,
-        this.publicKey,
-        false,
-        TOKEN_2022_PROGRAM_ID,
-        ASSOCIATED_TOKEN_PROGRAM_ID
-      );
-
-      transaction.add(
-        createAssociatedTokenAccountInstruction(
-          this.publicKey,
-          associatedToken,
-          this.publicKey,
-          mint,
-          TOKEN_2022_PROGRAM_ID,
-          ASSOCIATED_TOKEN_PROGRAM_ID
-        )
-      );
-
-      if (tokenData.supply > 0) {
-        transaction.add(
-          createMintToInstruction(
-            mint,
-            associatedToken,
-            this.publicKey,
-            tokenData.supply * Math.pow(10, tokenData.decimals),
-            [],
-            TOKEN_2022_PROGRAM_ID
-          )
-        );
-      }
-
-      if (tokenData.lockMint) {
-        transaction.add(
-          createSetAuthorityInstruction(
-            mint,
-            this.publicKey,
-            AuthorityType.MintTokens,
-            null,
-            [],
-            TOKEN_2022_PROGRAM_ID
-          )
-        );
-      }
-
       const { blockhash } = await this.connection.getLatestBlockhash();
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = this.publicKey;
@@ -428,6 +383,66 @@ class SolanaWeb3Service {
       });
 
       await this.connection.confirmTransaction(signature, 'confirmed');
+
+      // Create ATA and mint tokens in SEPARATE transaction
+      const associatedToken = await getAssociatedTokenAddress(
+        mint,
+        this.publicKey,
+        false,
+        TOKEN_2022_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+
+      const transaction2 = new Transaction();
+
+      transaction2.add(
+        createAssociatedTokenAccountInstruction(
+          this.publicKey,
+          associatedToken,
+          this.publicKey,
+          mint,
+          TOKEN_2022_PROGRAM_ID,
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        )
+      );
+
+      if (tokenData.supply > 0) {
+        transaction2.add(
+          createMintToInstruction(
+            mint,
+            associatedToken,
+            this.publicKey,
+            tokenData.supply * Math.pow(10, tokenData.decimals),
+            [],
+            TOKEN_2022_PROGRAM_ID
+          )
+        );
+      }
+
+      if (tokenData.lockMint) {
+        transaction2.add(
+          createSetAuthorityInstruction(
+            mint,
+            this.publicKey,
+            AuthorityType.MintTokens,
+            null,
+            [],
+            TOKEN_2022_PROGRAM_ID
+          )
+        );
+      }
+
+      const { blockhash: blockhash2 } = await this.connection.getLatestBlockhash();
+      transaction2.recentBlockhash = blockhash2;
+      transaction2.feePayer = this.publicKey;
+
+      const signedTx2 = await this.wallet.signTransaction(transaction2);
+      const signature2 = await this.connection.sendRawTransaction(signedTx2.serialize(), {
+        skipPreflight: false,
+        maxRetries: 3
+      });
+
+      await this.connection.confirmTransaction(signature2, 'confirmed');
 
       return {
         txHash: signature,
