@@ -280,8 +280,20 @@ class SolanaWeb3Service {
         extensions.push(ExtensionType.NonTransferable);
       }
 
-      // Only allocate space for extensions, NOT metadata content
-      const mintLen = getMintLen(extensions);
+      // Calculate space for mint + extensions + metadata content
+      let metadataSpace = 0;
+      if (extensions.includes(ExtensionType.MetadataPointer)) {
+        const metadata = pack({
+          mint: mint,
+          name: tokenData.name || 'Unknown',
+          symbol: tokenData.symbol || 'UNK',
+          uri: metadataUri || '',
+          additionalMetadata: []
+        });
+        metadataSpace = TYPE_SIZE + LENGTH_SIZE + metadata.length;
+      }
+      
+      const mintLen = getMintLen(extensions) + metadataSpace;
       const lamports = await this.connection.getMinimumBalanceForRentExemption(mintLen);
 
       const transaction = new Transaction();
