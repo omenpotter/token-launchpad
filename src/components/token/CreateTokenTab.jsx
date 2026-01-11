@@ -88,6 +88,11 @@ export default function CreateTokenTab({
                 Token 2022
               </label>
             </div>
+            <p className="text-xs text-slate-400 mt-2">
+              {tokenType === 'SPL' 
+                ? '📌 Standard SPL: Simple, widely supported, metadata via Metaplex'
+                : '✨ Token-2022: Advanced features - on-chain metadata, transfer fees, extensions'}
+            </p>
           </div>
         </div>
       </div>
