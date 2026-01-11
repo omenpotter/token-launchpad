@@ -71,6 +71,28 @@ export default function CreateTokenPage() {
   const handleApproveTransaction = async () => {
     setApprovalLoading(true);
     try {
+      // Step 1: Upload metadata to IPFS if metadata fields are provided
+      let metadataUri = null;
+      if (tokenName && tokenSymbol && (tokenDescription || tokenLogo || tokenWebsite)) {
+        try {
+          const metadataResponse = await base44.functions.invoke('uploadMetadataToIPFS', {
+            name: tokenName,
+            symbol: tokenSymbol,
+            description: tokenDescription,
+            imageUrl: tokenLogo,
+            website: tokenWebsite,
+            telegram: tokenTelegram,
+            twitter: tokenTwitter
+          });
+          
+          metadataUri = metadataResponse.data?.metadataUri || null;
+          console.log('Metadata uploaded:', metadataUri);
+        } catch (metadataError) {
+          console.warn('Failed to upload metadata, continuing without it:', metadataError);
+        }
+      }
+
+      // Step 2: Create token on-chain with metadata
       const result = await web3Service.createToken(network, {
         name: tokenName,
         symbol: tokenSymbol,
@@ -79,8 +101,9 @@ export default function CreateTokenPage() {
         lockMint: lockMintAuthority,
         immutable: immutableToken,
         maxPerWallet: fairMintEnabled ? maxPerWallet : 0
-      }, TOKEN_CREATION_FEE);
+      }, TOKEN_CREATION_FEE, metadataUri);
 
+      // Step 3: Save token to database
       const newToken = {
         name: tokenName,
         symbol: tokenSymbol,
@@ -107,7 +130,8 @@ export default function CreateTokenPage() {
         totalMinted: 0,
         burned: 0,
         txHash: result.txHash,
-        creator: walletAddress
+        creator: walletAddress,
+        metadataUri: metadataUri
       };
 
       await base44.entities.Token.create(newToken);
@@ -129,7 +153,7 @@ export default function CreateTokenPage() {
       setLockDuration(30);
       setLockReleaseDate('');
 
-      alert(`✅ Token created!\nAddress: ${result.tokenAddress}\nTx: ${result.txHash}`);
+      alert(`✅ Token created with metadata!\nAddress: ${result.tokenAddress}\nTx: ${result.txHash}${result.metadataTxHash ? `\nMetadata Tx: ${result.metadataTxHash}` : ''}`);
     } catch (error) {
       alert('Transaction failed: ' + error.message);
     } finally {
