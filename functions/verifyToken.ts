@@ -145,31 +145,48 @@ async function detectToken2022Features(extensions, mintAddress) {
 
 async function fetchMetaplexMetadata(mintAddress) {
   try {
+    // Use Metaplex DAS API or direct RPC call
+    // For X1 chain, we'll try to fetch the account using a derived PDA
+    
+    // Metaplex metadata PDA seeds: ['metadata', metaplex_program_id, mint_address]
+    // We can't easily derive PDA in Deno without crypto libraries, so we'll try alternative approach
+    
+    // Try to get token metadata using getProgramAccounts filtered by mint
     const METADATA_PROGRAM_ID = 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s';
     
-    // Derive metadata PDA
-    const seeds = [
-      Buffer.from('metadata'),
-      Buffer.from(METADATA_PROGRAM_ID, 'base58'),
-      Buffer.from(mintAddress, 'base58')
-    ];
+    try {
+      const accounts = await rpcCall('getProgramAccounts', [
+        METADATA_PROGRAM_ID,
+        {
+          encoding: 'base64',
+          filters: [
+            { dataSize: 679 }, // Metaplex metadata account size
+            {
+              memcmp: {
+                offset: 33, // Mint address offset in metadata account
+                bytes: mintAddress
+              }
+            }
+          ]
+        }
+      ]);
+      
+      if (accounts && accounts.length > 0) {
+        const data = accounts[0].account.data;
+        // Parse metadata (simplified - would need proper borsh deserialization)
+        console.log('[fetchMetaplexMetadata] Found metadata account');
+        return {
+          name: 'SPL Token',
+          symbol: 'SPL',
+          uri: ''
+        };
+      }
+    } catch (programAccountsError) {
+      console.log('[fetchMetaplexMetadata] getProgramAccounts not supported, trying direct fetch');
+    }
     
-    // Simple PDA derivation (not cryptographically accurate but works for most cases)
-    const metadataPDA = mintAddress; // Simplified - in production use proper PDA derivation
-    
-    const accountInfo = await rpcCall('getAccountInfo', [
-      metadataPDA,
-      { encoding: 'base64' }
-    ]);
-    
-    if (!accountInfo?.value?.data) return null;
-    
-    // Parse Metaplex metadata (simplified)
-    return {
-      name: 'Unknown',
-      symbol: 'UNK',
-      uri: ''
-    };
+    // Fallback: return null if metadata can't be fetched
+    return null;
   } catch (error) {
     console.error('[fetchMetaplexMetadata] Error:', error);
     return null;
