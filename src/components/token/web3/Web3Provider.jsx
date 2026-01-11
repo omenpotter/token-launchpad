@@ -354,6 +354,22 @@ class SolanaWeb3Service {
         )
       );
 
+      // Initialize metadata in SAME transaction
+      if (extensions.includes(ExtensionType.MetadataPointer)) {
+        transaction.add(
+          createInitializeInstruction({
+            programId: TOKEN_2022_PROGRAM_ID,
+            metadata: mint,
+            updateAuthority: this.publicKey,
+            mint: mint,
+            mintAuthority: this.publicKey,
+            name: tokenData.name || 'Unknown',
+            symbol: tokenData.symbol || 'UNK',
+            uri: metadataUri || ''
+          })
+        );
+      }
+
       const associatedToken = await getAssociatedTokenAddress(
         mint,
         this.publicKey,
@@ -413,47 +429,10 @@ class SolanaWeb3Service {
 
       await this.connection.confirmTransaction(signature, 'confirmed');
 
-      // Initialize metadata in SEPARATE transaction after mint is created
-      let metadataTxHash = null;
-      if (extensions.includes(ExtensionType.MetadataPointer) && (metadataUri || tokenData.name)) {
-        try {
-          const metadataTransaction = new Transaction();
-          
-          metadataTransaction.add(
-            createInitializeInstruction({
-              programId: TOKEN_2022_PROGRAM_ID,
-              metadata: mint,
-              updateAuthority: this.publicKey,
-              mint: mint,
-              mintAuthority: this.publicKey,
-              name: tokenData.name || 'Unknown',
-              symbol: tokenData.symbol || 'UNK',
-              uri: metadataUri || ''
-            })
-          );
-
-          const { blockhash: metadataBlockhash } = await this.connection.getLatestBlockhash();
-          metadataTransaction.recentBlockhash = metadataBlockhash;
-          metadataTransaction.feePayer = this.publicKey;
-
-          const signedMetadataTx = await this.wallet.signTransaction(metadataTransaction);
-          metadataTxHash = await this.connection.sendRawTransaction(signedMetadataTx.serialize(), {
-            skipPreflight: false,
-            maxRetries: 3
-          });
-          
-          await this.connection.confirmTransaction(metadataTxHash, 'confirmed');
-          console.log('✅ Metadata initialized:', metadataTxHash);
-        } catch (metadataError) {
-          console.warn('⚠️ Failed to initialize Token-2022 metadata (token created successfully):', metadataError);
-        }
-      }
-
       return {
         txHash: signature,
         tokenAddress: mint.toString(),
         associatedTokenAccount: associatedToken.toString(),
-        metadataTxHash,
         tokenType: 'TOKEN2022'
       };
     } catch (error) {
