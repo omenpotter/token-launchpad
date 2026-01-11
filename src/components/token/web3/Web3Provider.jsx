@@ -238,22 +238,28 @@ class SolanaWeb3Service {
         )
       );
 
-      // Initialize Token 2022 metadata in SAME transaction
+      // Initialize Token 2022 metadata in SAME transaction using NATIVE Token-2022 instruction
       if (extensions.includes(ExtensionType.MetadataPointer)) {
-        const { createInitializeInstruction } = await import('@solana/spl-token-metadata');
+        // Import the Token-2022 specific metadata instruction builder
+        const { 
+          createInitializeInstruction,
+          createUpdateFieldInstruction,
+          TokenMetadata 
+        } = await import('@solana/spl-token-metadata');
 
-        transaction.add(
-          createInitializeInstruction({
-            programId: TOKEN_2022_PROGRAM_ID,
-            metadata: mint,
-            updateAuthority: this.publicKey,
-            mint: mint,
-            mintAuthority: this.publicKey,
-            name: tokenData.name || 'Unknown',
-            symbol: tokenData.symbol || 'UNK',
-            uri: metadataUri || ''
-          })
-        );
+        // Create the metadata initialization instruction
+        const initializeMetadataInstruction = createInitializeInstruction({
+          programId: TOKEN_2022_PROGRAM_ID,
+          mint: mint,
+          metadata: mint,  // For Token-2022, metadata account is the mint itself
+          name: tokenData.name || 'Unknown',
+          symbol: tokenData.symbol || 'UNK',
+          uri: metadataUri || '',
+          mintAuthority: this.publicKey,
+          updateAuthority: this.publicKey
+        });
+
+        transaction.add(initializeMetadataInstruction);
       }
 
       const { blockhash } = await this.connection.getLatestBlockhash();
