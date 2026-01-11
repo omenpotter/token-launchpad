@@ -31,7 +31,6 @@ const {
   createInitializeMetadataPointerInstruction,
   createInitializeTransferFeeConfigInstruction,
   createInitializeNonTransferableMintInstruction,
-  getMintLen as getToken2022MintLen,
   TYPE_SIZE,
   LENGTH_SIZE
 } = splToken;
