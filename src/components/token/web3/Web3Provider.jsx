@@ -122,135 +122,8 @@ class SolanaWeb3Service {
   }
 
   async createToken(network, tokenData, fee, metadataUri = null) {
-    // Route to Token-2022 if specified
-    if (tokenData.type === 'TOKEN2022') {
-      return this.createToken2022(network, tokenData, fee, metadataUri);
-    }
-
-    // Standard SPL Token creation
-    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
-    if (!this.connection) this.initConnection(network);
-
-    try {
-      const mintKeypair = Keypair.generate();
-      const mint = mintKeypair.publicKey;
-
-      const associatedToken = await getAssociatedTokenAddress(
-        mint,
-        this.publicKey,
-        false,
-        TOKEN_PROGRAM_ID,
-        ASSOCIATED_TOKEN_PROGRAM_ID
-      );
-
-      const mintLen = getMintLen([]);
-      const lamports = await this.connection.getMinimumBalanceForRentExemption(mintLen);
-
-      const transaction = new Transaction();
-
-      if (fee > 0) {
-        transaction.add(
-          SystemProgram.transfer({
-            fromPubkey: this.publicKey,
-            toPubkey: new PublicKey(FEE_RECIPIENT_ADDRESS),
-            lamports: fee * LAMPORTS_PER_SOL
-          })
-        );
-      }
-
-      transaction.add(
-        SystemProgram.createAccount({
-          fromPubkey: this.publicKey,
-          newAccountPubkey: mint,
-          space: mintLen,
-          lamports,
-          programId: TOKEN_PROGRAM_ID
-        })
-      );
-
-      transaction.add(
-        createInitializeMintInstruction(
-          mint,
-          tokenData.decimals,
-          this.publicKey,
-          tokenData.immutable ? null : this.publicKey,
-          TOKEN_PROGRAM_ID
-        )
-      );
-
-      transaction.add(
-        createAssociatedTokenAccountInstruction(
-          this.publicKey,
-          associatedToken,
-          this.publicKey,
-          mint,
-          TOKEN_PROGRAM_ID,
-          ASSOCIATED_TOKEN_PROGRAM_ID
-        )
-      );
-
-      if (tokenData.supply > 0) {
-        transaction.add(
-          createMintToInstruction(
-            mint,
-            associatedToken,
-            this.publicKey,
-            tokenData.supply * Math.pow(10, tokenData.decimals),
-            [],
-            TOKEN_PROGRAM_ID
-          )
-        );
-      }
-
-      if (tokenData.lockMint) {
-        transaction.add(
-          createSetAuthorityInstruction(
-            mint,
-            this.publicKey,
-            AuthorityType.MintTokens,
-            null,
-            [],
-            TOKEN_PROGRAM_ID
-          )
-        );
-      }
-
-      const { blockhash } = await this.connection.getLatestBlockhash();
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = this.publicKey;
-
-      transaction.partialSign(mintKeypair);
-
-      const signedTx = await this.wallet.signTransaction(transaction);
-      const signature = await this.connection.sendRawTransaction(signedTx.serialize());
-
-      await this.connection.confirmTransaction(signature, 'confirmed');
-
-      let metadataTxHash = null;
-      if (metadataUri) {
-        try {
-          metadataTxHash = await this.createMetaplexMetadata(
-            mint.toString(),
-            metadataUri,
-            tokenData.name,
-            tokenData.symbol,
-            !tokenData.immutable
-          );
-        } catch (metadataError) {
-          console.warn('Failed to create metadata, but token was created:', metadataError);
-        }
-      }
-
-      return {
-        txHash: signature,
-        tokenAddress: mint.toString(),
-        associatedTokenAccount: associatedToken.toString(),
-        metadataTxHash
-      };
-    } catch (error) {
-      console.error('Error creating token:', error);
-      throw error;
-    }
+    // All tokens are now Token-2022 by default
+    return this.createToken2022(network, tokenData, fee, metadataUri);
   }
 
   async createToken2022(network, tokenData, fee, metadataUri = null) {
@@ -258,8 +131,6 @@ class SolanaWeb3Service {
     if (!this.connection) this.initConnection(network);
 
     try {
-      const { pack, TokenMetadata, createInitializeInstruction, createUpdateFieldInstruction } = await import('@solana/spl-token-metadata');
-
       const mintKeypair = Keypair.generate();
       const mint = mintKeypair.publicKey;
 
@@ -283,6 +154,7 @@ class SolanaWeb3Service {
       // Calculate space for mint + extensions + metadata content
       let metadataSpace = 0;
       if (extensions.includes(ExtensionType.MetadataPointer)) {
+        const { pack } = await import('@solana/spl-token-metadata');
         const metadata = pack({
           mint: mint,
           name: tokenData.name || 'Unknown',
@@ -292,7 +164,7 @@ class SolanaWeb3Service {
         });
         metadataSpace = TYPE_SIZE + LENGTH_SIZE + metadata.length;
       }
-      
+
       const mintLen = getMintLen(extensions) + metadataSpace;
       const lamports = await this.connection.getMinimumBalanceForRentExemption(mintLen);
 
@@ -366,8 +238,10 @@ class SolanaWeb3Service {
         )
       );
 
-      // Initialize metadata in SAME transaction
+      // Initialize Token 2022 metadata in SAME transaction
       if (extensions.includes(ExtensionType.MetadataPointer)) {
+        const { createInitializeInstruction } = await import('@solana/spl-token-metadata');
+
         transaction.add(
           createInitializeInstruction({
             programId: TOKEN_2022_PROGRAM_ID,
