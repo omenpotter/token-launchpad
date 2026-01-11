@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, RefreshCw, Zap } from 'lucide-react';
+import { TrendingUp, TrendingDown, RefreshCw, Zap, ExternalLink } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const X1_RPC_ENDPOINT = 'https://rpc.mainnet.x1.xyz';
@@ -130,6 +130,23 @@ export default function AdvancedTradingPanel({
               {tf}
             </button>
           ))}
+        </div>
+
+        {/* Token Header with x1.ninja Link */}
+        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-white">{tokenSymbol}/XNT</h3>
+            <p className="text-sm text-slate-400">{tokenName}</p>
+          </div>
+          <a
+            href={`https://x1.ninja/token/${tokenAddress}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 rounded-lg transition text-sm font-medium flex items-center gap-2"
+          >
+            View on x1.ninja
+            <ExternalLink className="w-4 h-4" />
+          </a>
         </div>
 
         {/* Price Chart */}
