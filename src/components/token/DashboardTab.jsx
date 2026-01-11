@@ -24,9 +24,9 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
 
   const getExplorerUrl = (mint, tokenNetwork) => {
     if (tokenNetwork === 'x1Testnet') {
-      return `https://explorer.testnet.x1.xyz/address/${mint}`;
+      return `https://www.x1space.xyz/address/${mint}?network=testnet`;
     } else if (tokenNetwork === 'x1Mainnet') {
-      return `https://explorer.mainnet.x1.xyz/address/${mint}`;
+      return `https://www.x1space.xyz/address/${mint}`;
     }
     return '#';
   };
@@ -171,28 +171,38 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
               </div>
 
               <div className="flex items-center justify-between p-3 bg-slate-700/20 rounded-xl mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400">Mint Address:</span>
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <span className="text-xs text-slate-400">Mint:</span>
                   <a 
                     href={getExplorerUrl(token.mint, token.network)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-blue-400 font-mono hover:text-blue-300 transition flex items-center gap-1"
+                    className="text-sm text-blue-400 font-mono hover:text-blue-300 transition flex items-center gap-1 truncate"
                   >
                     {token.mint}
-                    <ExternalLink className="w-3 h-3" />
+                    <ExternalLink className="w-3 h-3 flex-shrink-0" />
                   </a>
                 </div>
-                <button
-                  onClick={() => copyToClipboard(token.mint, token.id)}
-                  className="p-2 hover:bg-slate-600/50 rounded-lg transition"
-                >
-                  {copiedId === token.id ? (
-                    <CheckCircle className="w-4 h-4 text-green-400" />
-                  ) : (
-                    <Copy className="w-4 h-4 text-slate-400" />
-                  )}
-                </button>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={`https://x1.ninja/token/${token.mint}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2 py-1 text-xs bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 rounded transition"
+                  >
+                    x1.ninja
+                  </a>
+                  <button
+                    onClick={() => copyToClipboard(token.mint, token.id)}
+                    className="p-2 hover:bg-slate-600/50 rounded-lg transition"
+                  >
+                    {copiedId === token.id ? (
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                    ) : (
+                      <Copy className="w-4 h-4 text-slate-400" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               {/* Quick Actions */}

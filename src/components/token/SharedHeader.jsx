@@ -83,6 +83,12 @@ export default function SharedHeader() {
             <a href="https://xdex.xyz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition">
               xDEX
             </a>
+            <a href="https://x1.ninja" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition">
+              x1.ninja
+            </a>
+            <a href="https://www.x1space.xyz/" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition">
+              Explorer
+            </a>
             <a href="https://t.me/xdex_xyz" target="_blank" rel="noopener noreferrer" title="Telegram">
               <img src={TELEGRAM_ICON} alt="Telegram" className="w-5 h-5 rounded-full hover:opacity-80 transition" />
             </a>

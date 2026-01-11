@@ -588,13 +588,22 @@ export default function TokenVerificationPage() {
               </div>
             )}
 
-            {/* Report Button */}
-            <div className="mt-4">
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              <a
+                href={`https://x1.ninja/token/${verificationResult.mintAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl transition font-medium text-center flex items-center justify-center gap-2"
+              >
+                <ExternalLink className="w-4 h-4" />
+                View on x1.ninja
+              </a>
               <button
                 onClick={() => setShowReportModal(true)}
-                className="w-full px-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl transition font-medium"
+                className="px-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl transition font-medium"
               >
-                Report Suspicious Token
+                Report Token
               </button>
             </div>
           </motion.div>
