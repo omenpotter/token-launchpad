@@ -44,7 +44,7 @@ export default function LiquidityPoolPage() {
   };
 
   const handleAddLiquidity = async () => {
-    if (!selectedToken || !liquidityAmount) {
+    if (!selectedToken || !liquidityAmount || !tokenAmount) {
       alert('Please select a token and enter amounts');
       return;
     }
@@ -59,19 +59,25 @@ export default function LiquidityPoolPage() {
     
     setIsLoading(true);
     try {
-      const result = await web3Service.addLiquidity(
-        'x1Mainnet',
-        selectedTokenData.mint,
-        parseFloat(tokenAmount),
-        parseFloat(liquidityAmount),
-        selectedTokenData.decimals || 9
-      );
+      // Call xDEX backend API to add liquidity
+      const result = await base44.functions.invoke('xdexAddLiquidity', {
+        tokenMint: selectedTokenData.mint,
+        tokenAmount: parseFloat(tokenAmount),
+        xntAmount: parseFloat(liquidityAmount),
+        walletAddress: walletAddress,
+        lockPeriod: liquidityLockPeriod
+      });
       
-      alert(`✅ Liquidity added successfully!\nTx: ${result.txHash}\nLocked for ${liquidityLockPeriod === 999999 ? 'forever' : `${liquidityLockPeriod} days`}`);
-      setTokenAmount('1000');
-      setLiquidityAmount('0.1');
+      if (result.data.success) {
+        alert(`✅ Liquidity added successfully via xDEX!\nTx: ${result.data.txHash}\nPool: ${result.data.poolAddress}\nLocked for ${liquidityLockPeriod === 999999 ? 'forever' : `${liquidityLockPeriod} days`}`);
+        setTokenAmount('1000');
+        setLiquidityAmount('0.1');
+      } else {
+        throw new Error(result.data.error || 'Failed to add liquidity');
+      }
     } catch (error) {
-      alert('Failed to add liquidity: ' + error.message);
+      console.error('Add liquidity error:', error);
+      alert('Failed to add liquidity via xDEX: ' + (error.message || 'Unknown error'));
     } finally {
       setIsLoading(false);
     }
@@ -82,15 +88,31 @@ export default function LiquidityPoolPage() {
       alert('Please connect wallet first');
       return;
     }
-    alert(`Remove ${removePercentage}% of liquidity - Coming soon via xDEX integration`);
+    
+    setIsLoading(true);
+    try {
+      // Call xDEX backend API to remove liquidity
+      const result = await base44.functions.invoke('xdexRemoveLiquidity', {
+        poolAddress: selectedTokenData?.mint || 'pool_address',
+        percentage: removePercentage,
+        walletAddress: walletAddress
+      });
+      
+      if (result.data.success) {
+        alert(`✅ Removed ${removePercentage}% of liquidity via xDEX!\nTx: ${result.data.txHash}\nReceived tokens: ${result.data.tokenAReceived} and ${result.data.tokenBReceived} XNT`);
+      } else {
+        throw new Error(result.data.error || 'Failed to remove liquidity');
+      }
+    } catch (error) {
+      console.error('Remove liquidity error:', error);
+      alert('Failed to remove liquidity via xDEX: ' + (error.message || 'Unknown error'));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCreatePool = () => {
-    if (!selectedToken) {
-      alert('Please select a token first');
-      return;
-    }
-    window.open('https://app.xdex.xyz/liquidity/add', '_blank');
+    window.open('https://app.xdex.xyz/liquidity', '_blank');
   };
 
   const handleSwap = () => {

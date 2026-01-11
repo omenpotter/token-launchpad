@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
+import { Link } from 'react-router-dom';
 import { Coins, ExternalLink, Clock, Shield, Copy, CheckCircle, Zap, Flame, Rocket, Eye, Edit2, Lock, Users, TrendingUp, BarChart3, Droplets, Send } from 'lucide-react';
 import { motion } from 'framer-motion';
 import EnhancedTokenAnalytics from './EnhancedTokenAnalytics';
@@ -24,9 +25,9 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
 
   const getExplorerUrl = (mint, tokenNetwork) => {
     if (tokenNetwork === 'x1Testnet') {
-      return `https://www.x1space.xyz/address/${mint}?network=testnet`;
+      return `https://explorer.mainnet.x1.xyz/address/${mint}?network=testnet`;
     } else if (tokenNetwork === 'x1Mainnet') {
-      return `https://www.x1space.xyz/address/${mint}`;
+      return `https://explorer.mainnet.x1.xyz/address/${mint}`;
     }
     return '#';
   };
@@ -171,18 +172,18 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
               </div>
 
               <div className="flex items-center justify-between p-3 bg-slate-700/20 rounded-xl mb-4">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <span className="text-xs text-slate-400">Mint:</span>
-                  <a 
-                    href={getExplorerUrl(token.mint, token.network)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-400 font-mono hover:text-blue-300 transition flex items-center gap-1 truncate"
-                  >
-                    {token.mint}
-                    <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                  </a>
-                </div>
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <span className="text-xs text-slate-400">Mint:</span>
+                                  <a 
+                                    href={`https://explorer.mainnet.x1.xyz/address/${token.mint}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-blue-400 font-mono hover:text-blue-300 transition flex items-center gap-1 truncate"
+                                  >
+                                    {token.mint}
+                                    <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                                  </a>
+                                </div>
                 <div className="flex items-center gap-2">
                   <a
                     href={`https://x1.ninja/token/${token.mint}`}
@@ -215,7 +216,28 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
                   Mint More
                 </button>
                 <button
-                  onClick={() => onQuickAction('burn', token.id)}
+                  onClick={async () => {
+                    const burnAmount = prompt(`Enter amount of ${token.symbol} to burn:`);
+                    if (!burnAmount || isNaN(burnAmount) || parseFloat(burnAmount) <= 0) {
+                      alert('Invalid burn amount');
+                      return;
+                    }
+
+                    try {
+                      await base44.entities.Token.update(token.id, {
+                        supply: Math.max(0, token.supply - parseFloat(burnAmount)),
+                        burned: (token.burned || 0) + parseFloat(burnAmount)
+                      });
+
+                      if (typeof setCreatedTokens === 'function') {
+                        await setCreatedTokens();
+                      }
+
+                      alert(`✅ Burned ${burnAmount} ${token.symbol} successfully!`);
+                    } catch (error) {
+                      alert('Failed to burn tokens: ' + error.message);
+                    }
+                  }}
                   className="flex items-center justify-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition text-sm font-medium"
                 >
                   <Flame className="w-4 h-4" />
@@ -229,13 +251,13 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
                   <Send className="w-4 h-4" />
                   {token.sentForMinting ? 'Sent' : 'Minting'}
                 </button>
-                <button
-                  onClick={() => onQuickAction('presale', token.id)}
+                <Link
+                  to={createPageUrl('Launchpad')}
                   className="flex items-center justify-center gap-2 px-3 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-lg transition text-sm font-medium"
                 >
                   <Rocket className="w-4 h-4" />
                   Launch
-                </button>
+                </Link>
                 <button
                   onClick={() => toggleAdvancedOptions(token.id)}
                   className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg transition text-sm font-medium"
