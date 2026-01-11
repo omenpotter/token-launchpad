@@ -14,8 +14,10 @@ const {
 
 const {
   TOKEN_PROGRAM_ID,
+  TOKEN_2022_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
   createInitializeMintInstruction,
+  createInitializeMint2Instruction,
   createAssociatedTokenAccountInstruction,
   createMintToInstruction,
   createBurnInstruction,
@@ -24,7 +26,14 @@ const {
   getAccount,
   getMint,
   getMintLen,
-  AuthorityType
+  AuthorityType,
+  ExtensionType,
+  createInitializeMetadataPointerInstruction,
+  createInitializeTransferFeeConfigInstruction,
+  createInitializeNonTransferableMintInstruction,
+  getMintLen as getToken2022MintLen,
+  TYPE_SIZE,
+  LENGTH_SIZE
 } = splToken;
 
 // CRITICAL: Standardized dApp metadata - MUST be used in ALL wallet connects
@@ -114,6 +123,12 @@ class SolanaWeb3Service {
   }
 
   async createToken(network, tokenData, fee, metadataUri = null) {
+    // Route to Token-2022 if specified
+    if (tokenData.type === 'TOKEN2022') {
+      return this.createToken2022(network, tokenData, fee, metadataUri);
+    }
+
+    // Standard SPL Token creation
     if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
     if (!this.connection) this.initConnection(network);
 
@@ -154,13 +169,12 @@ class SolanaWeb3Service {
         })
       );
 
-      // Initialize mint with mint authority and freeze authority
       transaction.add(
         createInitializeMintInstruction(
           mint,
           tokenData.decimals,
-          this.publicKey, // mint authority (will be revoked later if lockMint is true)
-          tokenData.immutable ? null : this.publicKey, // freeze authority (null if immutable)
+          this.publicKey,
+          tokenData.immutable ? null : this.publicKey,
           TOKEN_PROGRAM_ID
         )
       );
@@ -189,14 +203,13 @@ class SolanaWeb3Service {
         );
       }
 
-      // Lock mint authority if lockMint is true
       if (tokenData.lockMint) {
         transaction.add(
           createSetAuthorityInstruction(
             mint,
-            this.publicKey, // current authority
+            this.publicKey,
             AuthorityType.MintTokens,
-            null, // set to null to lock
+            null,
             [],
             TOKEN_PROGRAM_ID
           )
@@ -214,7 +227,6 @@ class SolanaWeb3Service {
 
       await this.connection.confirmTransaction(signature, 'confirmed');
 
-      // If metadata URI is provided, create Metaplex metadata
       let metadataTxHash = null;
       if (metadataUri) {
         try {
@@ -238,6 +250,231 @@ class SolanaWeb3Service {
       };
     } catch (error) {
       console.error('Error creating token:', error);
+      throw error;
+    }
+  }
+
+  async createToken2022(network, tokenData, fee, metadataUri = null) {
+    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
+    if (!this.connection) this.initConnection(network);
+
+    try {
+      const mintKeypair = Keypair.generate();
+      const mint = mintKeypair.publicKey;
+
+      const extensions = [];
+      
+      // Add metadata pointer extension if metadata is provided
+      if (metadataUri || tokenData.name) {
+        extensions.push(ExtensionType.MetadataPointer);
+      }
+      
+      // Add transfer fee extension if specified
+      if (tokenData.transferFee) {
+        extensions.push(ExtensionType.TransferFeeConfig);
+      }
+      
+      // Add non-transferable extension if specified
+      if (tokenData.nonTransferable) {
+        extensions.push(ExtensionType.NonTransferable);
+      }
+
+      const mintLen = getMintLen(extensions);
+      const lamports = await this.connection.getMinimumBalanceForRentExemption(mintLen);
+
+      const transaction = new Transaction();
+
+      if (fee > 0) {
+        transaction.add(
+          SystemProgram.transfer({
+            fromPubkey: this.publicKey,
+            toPubkey: new PublicKey(FEE_RECIPIENT_ADDRESS),
+            lamports: fee * LAMPORTS_PER_SOL
+          })
+        );
+      }
+
+      transaction.add(
+        SystemProgram.createAccount({
+          fromPubkey: this.publicKey,
+          newAccountPubkey: mint,
+          space: mintLen,
+          lamports,
+          programId: TOKEN_2022_PROGRAM_ID
+        })
+      );
+
+      // Initialize extensions before mint
+      if (metadataUri || tokenData.name) {
+        transaction.add(
+          createInitializeMetadataPointerInstruction(
+            mint,
+            this.publicKey,
+            mint, // metadata address is the mint itself
+            TOKEN_2022_PROGRAM_ID
+          )
+        );
+      }
+
+      if (tokenData.transferFee) {
+        const feeBasisPoints = tokenData.transferFeeBasisPoints || 0;
+        const maxFee = tokenData.transferFeeMaximum || BigInt(0);
+        
+        transaction.add(
+          createInitializeTransferFeeConfigInstruction(
+            mint,
+            this.publicKey,
+            this.publicKey,
+            feeBasisPoints,
+            maxFee,
+            TOKEN_2022_PROGRAM_ID
+          )
+        );
+      }
+
+      if (tokenData.nonTransferable) {
+        transaction.add(
+          createInitializeNonTransferableMintInstruction(
+            mint,
+            TOKEN_2022_PROGRAM_ID
+          )
+        );
+      }
+
+      // Initialize mint
+      transaction.add(
+        createInitializeMint2Instruction(
+          mint,
+          tokenData.decimals,
+          this.publicKey,
+          tokenData.immutable ? null : this.publicKey,
+          TOKEN_2022_PROGRAM_ID
+        )
+      );
+
+      const associatedToken = await getAssociatedTokenAddress(
+        mint,
+        this.publicKey,
+        false,
+        TOKEN_2022_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+
+      transaction.add(
+        createAssociatedTokenAccountInstruction(
+          this.publicKey,
+          associatedToken,
+          this.publicKey,
+          mint,
+          TOKEN_2022_PROGRAM_ID,
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        )
+      );
+
+      if (tokenData.supply > 0) {
+        transaction.add(
+          createMintToInstruction(
+            mint,
+            associatedToken,
+            this.publicKey,
+            tokenData.supply * Math.pow(10, tokenData.decimals),
+            [],
+            TOKEN_2022_PROGRAM_ID
+          )
+        );
+      }
+
+      if (tokenData.lockMint) {
+        transaction.add(
+          createSetAuthorityInstruction(
+            mint,
+            this.publicKey,
+            AuthorityType.MintTokens,
+            null,
+            [],
+            TOKEN_2022_PROGRAM_ID
+          )
+        );
+      }
+
+      const { blockhash } = await this.connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = this.publicKey;
+
+      transaction.partialSign(mintKeypair);
+
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize());
+
+      await this.connection.confirmTransaction(signature, 'confirmed');
+
+      // Initialize Token-2022 metadata if provided
+      let metadataTxHash = null;
+      if ((metadataUri || tokenData.name) && extensions.includes(ExtensionType.MetadataPointer)) {
+        try {
+          metadataTxHash = await this.initializeToken2022Metadata(
+            mint.toString(),
+            tokenData.name || 'Unknown',
+            tokenData.symbol || 'UNK',
+            metadataUri || ''
+          );
+        } catch (metadataError) {
+          console.warn('Failed to initialize Token-2022 metadata:', metadataError);
+        }
+      }
+
+      return {
+        txHash: signature,
+        tokenAddress: mint.toString(),
+        associatedTokenAccount: associatedToken.toString(),
+        metadataTxHash,
+        tokenType: 'TOKEN2022'
+      };
+    } catch (error) {
+      console.error('Error creating Token-2022:', error);
+      throw error;
+    }
+  }
+
+  async initializeToken2022Metadata(tokenMint, name, symbol, uri) {
+    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
+    if (!this.connection) throw new Error('Connection not initialized');
+
+    try {
+      const { 
+        createInitializeInstruction,
+        createUpdateFieldInstruction,
+        pack
+      } = await import('@solana/spl-token-metadata');
+      
+      const mint = new PublicKey(tokenMint);
+      const transaction = new Transaction();
+
+      // Initialize metadata
+      transaction.add(
+        createInitializeInstruction({
+          programId: TOKEN_2022_PROGRAM_ID,
+          metadata: mint,
+          updateAuthority: this.publicKey,
+          mint: mint,
+          mintAuthority: this.publicKey,
+          name: name,
+          symbol: symbol,
+          uri: uri
+        })
+      );
+
+      const { blockhash } = await this.connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = this.publicKey;
+
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize());
+      await this.connection.confirmTransaction(signature, 'confirmed');
+
+      return signature;
+    } catch (error) {
+      console.error('Error initializing Token-2022 metadata:', error);
       throw error;
     }
   }
@@ -303,20 +540,20 @@ class SolanaWeb3Service {
     }
   }
 
-  async mintTokens(tokenAddress, amount, decimals, fee) {
+  async mintTokens(tokenAddress, amount, decimals, fee, programId = TOKEN_PROGRAM_ID) {
     if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
     if (!this.connection) throw new Error('Connection not initialized');
 
     try {
       const mint = new PublicKey(tokenAddress);
+      const tokenProgramId = new PublicKey(programId);
       
       // Check if mint authority exists
-      const mintInfo = await getMint(this.connection, mint);
+      const mintInfo = await getMint(this.connection, mint, 'confirmed', tokenProgramId);
       if (!mintInfo.mintAuthority) {
         throw new Error('Mint authority has been revoked. Cannot mint more tokens.');
       }
       
-      // Verify current user is the mint authority
       if (mintInfo.mintAuthority.toString() !== this.publicKey.toString()) {
         throw new Error('You are not the mint authority for this token.');
       }
@@ -325,7 +562,7 @@ class SolanaWeb3Service {
         mint,
         this.publicKey,
         false,
-        TOKEN_PROGRAM_ID,
+        tokenProgramId,
         ASSOCIATED_TOKEN_PROGRAM_ID
       );
 
@@ -348,7 +585,7 @@ class SolanaWeb3Service {
           this.publicKey,
           amount * Math.pow(10, decimals),
           [],
-          TOKEN_PROGRAM_ID
+          tokenProgramId
         )
       );
 
@@ -369,23 +606,24 @@ class SolanaWeb3Service {
     }
   }
 
-  async burnTokens(tokenAddress, amount, decimals) {
+  async burnTokens(tokenAddress, amount, decimals, programId = TOKEN_PROGRAM_ID) {
     if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
     if (!this.connection) throw new Error('Connection not initialized');
 
     try {
       const mint = new PublicKey(tokenAddress);
+      const tokenProgramId = new PublicKey(programId);
+      
       const associatedToken = await getAssociatedTokenAddress(
         mint,
         this.publicKey,
         false,
-        TOKEN_PROGRAM_ID,
+        tokenProgramId,
         ASSOCIATED_TOKEN_PROGRAM_ID
       );
 
-      // Check if token account exists and has balance
       try {
-        const accountInfo = await getAccount(this.connection, associatedToken);
+        const accountInfo = await getAccount(this.connection, associatedToken, 'confirmed', tokenProgramId);
         const balance = Number(accountInfo.amount) / Math.pow(10, decimals);
         
         if (balance < amount) {
@@ -407,7 +645,7 @@ class SolanaWeb3Service {
           this.publicKey,
           amount * Math.pow(10, decimals),
           [],
-          TOKEN_PROGRAM_ID
+          tokenProgramId
         )
       );
 
@@ -428,19 +666,21 @@ class SolanaWeb3Service {
     }
   }
 
-  async getTokenInfo(tokenAddress) {
+  async getTokenInfo(tokenAddress, programId = TOKEN_PROGRAM_ID) {
     if (!this.connection) throw new Error('Connection not initialized');
 
     try {
       const mint = new PublicKey(tokenAddress);
-      const mintInfo = await getMint(this.connection, mint);
+      const tokenProgramId = new PublicKey(programId);
+      const mintInfo = await getMint(this.connection, mint, 'confirmed', tokenProgramId);
 
       return {
         address: tokenAddress,
         decimals: mintInfo.decimals,
         supply: Number(mintInfo.supply) / Math.pow(10, mintInfo.decimals),
         mintAuthority: mintInfo.mintAuthority?.toString() || null,
-        freezeAuthority: mintInfo.freezeAuthority?.toString() || null
+        freezeAuthority: mintInfo.freezeAuthority?.toString() || null,
+        programId: programId
       };
     } catch (error) {
       console.error('Error getting token info:', error);

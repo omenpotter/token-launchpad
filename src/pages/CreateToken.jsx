@@ -94,13 +94,17 @@ export default function CreateTokenPage() {
 
       // Step 2: Create token on-chain with metadata
       const result = await web3Service.createToken(network, {
+        type: tokenType,
         name: tokenName,
         symbol: tokenSymbol,
         decimals: decimals,
         supply: supply,
         lockMint: lockMintAuthority,
         immutable: immutableToken,
-        maxPerWallet: fairMintEnabled ? maxPerWallet : 0
+        maxPerWallet: fairMintEnabled ? maxPerWallet : 0,
+        transferFee: buyTax > 0 || sellTax > 0,
+        transferFeeBasisPoints: Math.max(buyTax, sellTax) * 100,
+        transferFeeMaximum: BigInt(1000000)
       }, TOKEN_CREATION_FEE, metadataUri);
 
       // Step 3: Save token to database
