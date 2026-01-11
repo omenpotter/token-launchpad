@@ -25,7 +25,7 @@ export const PAGES = {
 }
 
 export const pagesConfig = {
-    mainPage: "X1TokenLauncher",
+    mainPage: "Minting",
     Pages: PAGES,
     Layout: __Layout,
 };
