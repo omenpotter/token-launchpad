@@ -113,7 +113,7 @@ class SolanaWeb3Service {
     return balance / LAMPORTS_PER_SOL;
   }
 
-  async createToken(network, tokenData, fee) {
+  async createToken(network, tokenData, fee, metadataUri = null) {
     if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
     if (!this.connection) this.initConnection(network);
 
@@ -214,13 +214,91 @@ class SolanaWeb3Service {
 
       await this.connection.confirmTransaction(signature, 'confirmed');
 
+      // If metadata URI is provided, create Metaplex metadata
+      let metadataTxHash = null;
+      if (metadataUri) {
+        try {
+          metadataTxHash = await this.createMetaplexMetadata(
+            mint.toString(),
+            metadataUri,
+            tokenData.name,
+            tokenData.symbol,
+            !tokenData.immutable
+          );
+        } catch (metadataError) {
+          console.warn('Failed to create metadata, but token was created:', metadataError);
+        }
+      }
+
       return {
         txHash: signature,
         tokenAddress: mint.toString(),
-        associatedTokenAccount: associatedToken.toString()
+        associatedTokenAccount: associatedToken.toString(),
+        metadataTxHash
       };
     } catch (error) {
       console.error('Error creating token:', error);
+      throw error;
+    }
+  }
+
+  async createMetaplexMetadata(tokenMint, metadataUri, name, symbol, isMutable = true) {
+    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
+    if (!this.connection) throw new Error('Connection not initialized');
+
+    try {
+      const { createCreateMetadataAccountV3Instruction, PROGRAM_ID } = await import('@metaplex-foundation/mpl-token-metadata');
+      
+      const mint = new PublicKey(tokenMint);
+      
+      // Derive metadata PDA
+      const [metadataPDA] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('metadata'),
+          PROGRAM_ID.toBuffer(),
+          mint.toBuffer()
+        ],
+        PROGRAM_ID
+      );
+
+      const createMetadataInstruction = createCreateMetadataAccountV3Instruction(
+        {
+          metadata: metadataPDA,
+          mint: mint,
+          mintAuthority: this.publicKey,
+          payer: this.publicKey,
+          updateAuthority: this.publicKey
+        },
+        {
+          createMetadataAccountArgsV3: {
+            data: {
+              name: name,
+              symbol: symbol,
+              uri: metadataUri,
+              sellerFeeBasisPoints: 0,
+              creators: null,
+              collection: null,
+              uses: null
+            },
+            isMutable: isMutable,
+            collectionDetails: null
+          }
+        }
+      );
+
+      const transaction = new Transaction().add(createMetadataInstruction);
+      
+      const { blockhash } = await this.connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = this.publicKey;
+
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize());
+      await this.connection.confirmTransaction(signature, 'confirmed');
+
+      return signature;
+    } catch (error) {
+      console.error('Error creating Metaplex metadata:', error);
       throw error;
     }
   }
