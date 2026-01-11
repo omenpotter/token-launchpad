@@ -28,13 +28,29 @@ export default function DashboardPage() {
       <SharedHeader />
 
       <main className="max-w-6xl mx-auto px-4 py-6">
-        <Link
-          to={createPageUrl('Minting')}
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Minting</span>
-        </Link>
+        <div className="flex items-center gap-4 mb-6">
+          <Link
+            to={createPageUrl('Minting')}
+            className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Minting</span>
+          </Link>
+          <div className="flex gap-3 ml-auto">
+            <Link to={createPageUrl('Dashboard')} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition">
+              Dashboard
+            </Link>
+            <Link to={createPageUrl('Launchpad')} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition">
+              Launchpad
+            </Link>
+            <Link to={createPageUrl('LiquidityPool')} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition">
+              Liquidity
+            </Link>
+            <Link to={createPageUrl('Trade')} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition">
+              Trade
+            </Link>
+          </div>
+        </div>
         
         <DashboardTab
           createdTokens={createdTokens}

@@ -59,25 +59,14 @@ export default function LiquidityPoolPage() {
     
     setIsLoading(true);
     try {
-      // Call xDEX backend API to add liquidity
-      const result = await base44.functions.invoke('xdexAddLiquidity', {
-        tokenMint: selectedTokenData.mint,
-        tokenAmount: parseFloat(tokenAmount),
-        xntAmount: parseFloat(liquidityAmount),
-        walletAddress: walletAddress,
-        lockPeriod: liquidityLockPeriod
-      });
-      
-      if (result.data.success) {
-        alert(`✅ Liquidity added successfully via xDEX!\nTx: ${result.data.txHash}\nPool: ${result.data.poolAddress}\nLocked for ${liquidityLockPeriod === 999999 ? 'forever' : `${liquidityLockPeriod} days`}`);
-        setTokenAmount('1000');
-        setLiquidityAmount('0.1');
-      } else {
-        throw new Error(result.data.error || 'Failed to add liquidity');
-      }
+      // Open xDEX to add liquidity manually since API integration is in progress
+      window.open(`https://app.xdex.xyz/liquidity?token=${selectedTokenData.mint}`, '_blank');
+      alert(`Opening xDEX to add liquidity for ${selectedTokenData.symbol}.\n\nToken: ${tokenAmount} ${selectedTokenData.symbol}\nXNT: ${liquidityAmount}\nLock: ${liquidityLockPeriod === 999999 ? 'Forever' : `${liquidityLockPeriod} days`}`);
+      setTokenAmount('1000');
+      setLiquidityAmount('0.1');
     } catch (error) {
       console.error('Add liquidity error:', error);
-      alert('Failed to add liquidity via xDEX: ' + (error.message || 'Unknown error'));
+      alert('Failed to open xDEX: ' + (error.message || 'Unknown error'));
     } finally {
       setIsLoading(false);
     }
@@ -91,21 +80,12 @@ export default function LiquidityPoolPage() {
     
     setIsLoading(true);
     try {
-      // Call xDEX backend API to remove liquidity
-      const result = await base44.functions.invoke('xdexRemoveLiquidity', {
-        poolAddress: selectedTokenData?.mint || 'pool_address',
-        percentage: removePercentage,
-        walletAddress: walletAddress
-      });
-      
-      if (result.data.success) {
-        alert(`✅ Removed ${removePercentage}% of liquidity via xDEX!\nTx: ${result.data.txHash}\nReceived tokens: ${result.data.tokenAReceived} and ${result.data.tokenBReceived} XNT`);
-      } else {
-        throw new Error(result.data.error || 'Failed to remove liquidity');
-      }
+      // Open xDEX to remove liquidity manually since API integration is in progress
+      window.open('https://app.xdex.xyz/liquidity', '_blank');
+      alert(`Opening xDEX to remove ${removePercentage}% of your liquidity.`);
     } catch (error) {
       console.error('Remove liquidity error:', error);
-      alert('Failed to remove liquidity via xDEX: ' + (error.message || 'Unknown error'));
+      alert('Failed to open xDEX: ' + (error.message || 'Unknown error'));
     } finally {
       setIsLoading(false);
     }
@@ -134,13 +114,29 @@ export default function LiquidityPoolPage() {
       <SharedHeader />
 
       <main className="max-w-6xl mx-auto px-4 py-6">
-        <Link
-          to={createPageUrl('Minting')}
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Minting</span>
-        </Link>
+        <div className="flex items-center gap-4 mb-6">
+          <Link
+            to={createPageUrl('Minting')}
+            className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Minting</span>
+          </Link>
+          <div className="flex gap-3 ml-auto">
+            <Link to={createPageUrl('Dashboard')} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition">
+              Dashboard
+            </Link>
+            <Link to={createPageUrl('Launchpad')} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition">
+              Launchpad
+            </Link>
+            <Link to={createPageUrl('LiquidityPool')} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition">
+              Liquidity
+            </Link>
+            <Link to={createPageUrl('Trade')} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition">
+              Trade
+            </Link>
+          </div>
+        </div>
         
         {/* Stats Grid */}
         <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">

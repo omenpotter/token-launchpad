@@ -13,13 +13,13 @@ export default function SharedFooter() {
           </div>
           <div className="flex items-center gap-6">
             <a href="https://app.xdex.xyz/liquidity" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition text-sm">
-              xDEX Liquidity
+              xDEX
             </a>
             <a href="https://x1.ninja" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition text-sm">
-              x1.ninja
+              Screener
             </a>
             <a href="https://www.x1space.xyz/" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-cyan-400 transition text-sm">
-              Dashboard
+              Explorer
             </a>
             <a href="https://t.me/xdex_xyz" target="_blank" rel="noopener noreferrer" title="Telegram">
               <img src={TELEGRAM_ICON} alt="Telegram" className="w-5 h-5 rounded-full hover:opacity-80 transition" />
