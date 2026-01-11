@@ -79,7 +79,10 @@ export default function MintingPage() {
     if (!token) return;
 
     try {
-      const result = await web3Service.burnTokens(token.mint, burnAmount, token.decimals);
+      const programId = token.type === 'TOKEN2022' 
+        ? 'TokenzQdBNbNbGKPFXCWuBvf9Ss623VQ5DA' 
+        : 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+      const result = await web3Service.burnTokens(token.mint, burnAmount, token.decimals, programId);
       
       await base44.entities.Token.update(token.id, {
         burned: (token.burned || 0) + burnAmount,
@@ -107,7 +110,10 @@ export default function MintingPage() {
       }
       
       const userMintFee = token.mintingFee ?? 0;
-      const result = await web3Service.mintTokens(token.mint, mintAmount, token.decimals, userMintFee);
+      const programId = token.type === 'TOKEN2022' 
+        ? 'TokenzQdBNbNbGKPFXCWuBvf9Ss623VQ5DA' 
+        : 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+      const result = await web3Service.mintTokens(token.mint, mintAmount, token.decimals, userMintFee, programId);
       
       await base44.entities.Token.update(token.id, {
         totalMinted: (token.totalMinted || 0) + mintAmount,
