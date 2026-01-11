@@ -407,16 +407,34 @@ class SolanaWeb3Service {
 
       await this.connection.confirmTransaction(signature, 'confirmed');
 
-      // Initialize Token-2022 metadata if provided
+      // Initialize Token-2022 metadata if metadata pointer was added
       let metadataTxHash = null;
-      if ((metadataUri || tokenData.name) && extensions.includes(ExtensionType.MetadataPointer)) {
+      if (extensions.includes(ExtensionType.MetadataPointer)) {
         try {
-          metadataTxHash = await this.initializeToken2022Metadata(
-            mint.toString(),
-            tokenData.name || 'Unknown',
-            tokenData.symbol || 'UNK',
-            metadataUri || ''
-          );
+          // Import metadata helpers
+          const { pack, TokenMetadata } = await import('@solana/spl-token-metadata');
+          const { createInitializeInstruction } = await import('@solana/spl-token-metadata');
+
+          // Build metadata initialization instruction
+          const metadataInit = createInitializeInstruction({
+            programId: TOKEN_2022_PROGRAM_ID,
+            metadata: mint,
+            updateAuthority: this.publicKey,
+            mint: mint,
+            mintAuthority: this.publicKey,
+            name: tokenData.name || 'Unknown',
+            symbol: tokenData.symbol || 'UNK',
+            uri: metadataUri || ''
+          });
+
+          const metadataTransaction = new Transaction().add(metadataInit);
+          const { blockhash: metadataBlockhash } = await this.connection.getLatestBlockhash();
+          metadataTransaction.recentBlockhash = metadataBlockhash;
+          metadataTransaction.feePayer = this.publicKey;
+
+          const signedMetadataTx = await this.wallet.signTransaction(metadataTransaction);
+          metadataTxHash = await this.connection.sendRawTransaction(signedMetadataTx.serialize());
+          await this.connection.confirmTransaction(metadataTxHash, 'confirmed');
         } catch (metadataError) {
           console.warn('Failed to initialize Token-2022 metadata:', metadataError);
         }
@@ -435,33 +453,40 @@ class SolanaWeb3Service {
     }
   }
 
-  async initializeToken2022Metadata(tokenMint, name, symbol, uri) {
+  async initializeToken2022Metadata(mint, name, symbol, uri) {
     if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
     if (!this.connection) throw new Error('Connection not initialized');
 
     try {
-      const { 
-        createInitializeInstruction,
-        createUpdateFieldInstruction,
-        pack
-      } = await import('@solana/spl-token-metadata');
-      
-      const mint = new PublicKey(tokenMint);
-      const transaction = new Transaction();
+      const { pack, TokenMetadata } = await import('@solana/spl-token-metadata');
 
-      // Initialize metadata
-      transaction.add(
-        createInitializeInstruction({
-          programId: TOKEN_2022_PROGRAM_ID,
-          metadata: mint,
-          updateAuthority: this.publicKey,
-          mint: mint,
-          mintAuthority: this.publicKey,
-          name: name,
-          symbol: symbol,
-          uri: uri
-        })
-      );
+      const mintPubkey = new PublicKey(mint);
+
+      // Create metadata object
+      const metadata = {
+        mint: mintPubkey,
+        name: name,
+        symbol: symbol,
+        uri: uri,
+        additionalMetadata: []
+      };
+
+      // Pack metadata into buffer
+      const metadataBuffer = pack(metadata);
+
+      // Create instruction to initialize metadata
+      const initMetadataIx = splToken.createInitializeInstruction({
+        programId: TOKEN_2022_PROGRAM_ID,
+        metadata: mintPubkey,
+        updateAuthority: this.publicKey,
+        mint: mintPubkey,
+        mintAuthority: this.publicKey,
+        name: name,
+        symbol: symbol,
+        uri: uri
+      });
+
+      const transaction = new Transaction().add(initMetadataIx);
 
       const { blockhash } = await this.connection.getLatestBlockhash();
       transaction.recentBlockhash = blockhash;
