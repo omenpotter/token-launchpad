@@ -10,6 +10,7 @@ export default function EnhancedTokenAnalytics({ token }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeframe, setTimeframe] = useState('1d');
+  const [x1NinjaAnalytics, setX1NinjaAnalytics] = useState(null);
 
   useEffect(() => {
     fetchAnalytics();
@@ -19,6 +20,15 @@ export default function EnhancedTokenAnalytics({ token }) {
     setLoading(true);
     setError(null);
     try {
+      // Fetch X1 Ninja analytics
+      const ninjaRes = await base44.functions.invoke('fetchX1NinjaAnalytics', {
+        tokenAddress: token.mint
+      });
+      
+      if (ninjaRes.data.success) {
+        setX1NinjaAnalytics(ninjaRes.data.analytics);
+      }
+
       // Fetch price history
       const priceRes = await base44.functions.invoke('fetchPriceHistory', {
         tokenAddress: token.mint,
@@ -71,14 +81,16 @@ export default function EnhancedTokenAnalytics({ token }) {
     );
   }
 
-  const currentPrice = priceData.length > 0 ? priceData[priceData.length - 1].price : 0;
-  const priceChange = priceData.length > 1 
+  // Use X1 Ninja analytics if available, otherwise fallback to price data
+  const currentPrice = x1NinjaAnalytics?.price || (priceData.length > 0 ? priceData[priceData.length - 1].price : 0);
+  const priceChange = x1NinjaAnalytics?.priceChange24h || (priceData.length > 1 
     ? ((priceData[priceData.length - 1].price - priceData[0].price) / priceData[0].price) * 100 
-    : 0;
+    : 0);
 
-  const totalVolume = priceData.reduce((sum, d) => sum + (d.volume || 0), 0);
-  const marketCap = currentPrice * token.supply;
+  const totalVolume = x1NinjaAnalytics?.volume24h || priceData.reduce((sum, d) => sum + (d.volume || 0), 0);
+  const marketCap = x1NinjaAnalytics?.marketCap || (currentPrice * token.supply);
   const burnRate = token.burned ? (token.burned / token.initialSupply) * 100 : 0;
+  const holders = x1NinjaAnalytics?.holders || holderData?.totalHolders || 0;
 
   return (
     <div className="space-y-6">
@@ -116,7 +128,7 @@ export default function EnhancedTokenAnalytics({ token }) {
             <Users className="w-4 h-4 text-cyan-400" />
             <span className="text-xs text-slate-400">Holders</span>
           </div>
-          <p className="text-lg font-bold text-white">{holderData?.totalHolders || 0}</p>
+          <p className="text-lg font-bold text-white">{holders}</p>
         </div>
       </div>
 

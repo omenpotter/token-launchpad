@@ -132,21 +132,34 @@ export default function AdvancedTradingPanel({
           ))}
         </div>
 
-        {/* Token Header with x1.ninja Link */}
-        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-white">{tokenSymbol}/XNT</h3>
-            <p className="text-sm text-slate-400">{tokenName}</p>
+        {/* Token Header with Links */}
+        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-lg font-semibold text-white">{tokenSymbol}/XNT</h3>
+              <p className="text-sm text-slate-400">{tokenName}</p>
+            </div>
           </div>
-          <a
-            href={`https://x1.ninja/token/${tokenAddress}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 rounded-lg transition text-sm font-medium flex items-center gap-2"
-          >
-            View on x1.ninja
-            <ExternalLink className="w-4 h-4" />
-          </a>
+          <div className="flex gap-2">
+            <a
+              href={`https://x1.ninja/token/${tokenAddress}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 px-3 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 rounded-lg transition text-sm font-medium flex items-center justify-center gap-2"
+            >
+              <ExternalLink className="w-4 h-4" />
+              x1.ninja
+            </a>
+            <a
+              href="https://app.xdex.xyz/liquidity"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 px-3 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-lg transition text-sm font-medium flex items-center justify-center gap-2"
+            >
+              <ExternalLink className="w-4 h-4" />
+              xDEX
+            </a>
+          </div>
         </div>
 
         {/* Price Chart */}
