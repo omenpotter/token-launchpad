@@ -19,9 +19,12 @@ const {
   createAssociatedTokenAccountInstruction,
   createMintToInstruction,
   createBurnInstruction,
+  createSetAuthorityInstruction,
   getAssociatedTokenAddress,
+  getAccount,
   getMint,
-  getMintLen
+  getMintLen,
+  AuthorityType
 } = splToken;
 
 // CRITICAL: Standardized dApp metadata - MUST be used in ALL wallet connects
@@ -151,12 +154,13 @@ class SolanaWeb3Service {
         })
       );
 
+      // Initialize mint with mint authority and freeze authority
       transaction.add(
         createInitializeMintInstruction(
           mint,
           tokenData.decimals,
-          this.publicKey,
-          tokenData.lockMint ? null : this.publicKey,
+          this.publicKey, // mint authority (will be revoked later if lockMint is true)
+          tokenData.immutable ? null : this.publicKey, // freeze authority (null if immutable)
           TOKEN_PROGRAM_ID
         )
       );
@@ -179,6 +183,20 @@ class SolanaWeb3Service {
             associatedToken,
             this.publicKey,
             tokenData.supply * Math.pow(10, tokenData.decimals),
+            [],
+            TOKEN_PROGRAM_ID
+          )
+        );
+      }
+
+      // Lock mint authority if lockMint is true
+      if (tokenData.lockMint) {
+        transaction.add(
+          createSetAuthorityInstruction(
+            mint,
+            this.publicKey, // current authority
+            AuthorityType.MintTokens,
+            null, // set to null to lock
             [],
             TOKEN_PROGRAM_ID
           )
@@ -213,6 +231,18 @@ class SolanaWeb3Service {
 
     try {
       const mint = new PublicKey(tokenAddress);
+      
+      // Check if mint authority exists
+      const mintInfo = await getMint(this.connection, mint);
+      if (!mintInfo.mintAuthority) {
+        throw new Error('Mint authority has been revoked. Cannot mint more tokens.');
+      }
+      
+      // Verify current user is the mint authority
+      if (mintInfo.mintAuthority.toString() !== this.publicKey.toString()) {
+        throw new Error('You are not the mint authority for this token.');
+      }
+
       const associatedToken = await getAssociatedTokenAddress(
         mint,
         this.publicKey,
@@ -274,6 +304,21 @@ class SolanaWeb3Service {
         TOKEN_PROGRAM_ID,
         ASSOCIATED_TOKEN_PROGRAM_ID
       );
+
+      // Check if token account exists and has balance
+      try {
+        const accountInfo = await getAccount(this.connection, associatedToken);
+        const balance = Number(accountInfo.amount) / Math.pow(10, decimals);
+        
+        if (balance < amount) {
+          throw new Error(`Insufficient balance. You have ${balance} tokens, trying to burn ${amount}`);
+        }
+      } catch (error) {
+        if (error.message.includes('could not find account')) {
+          throw new Error('Token account not found. You may not hold any of these tokens.');
+        }
+        throw error;
+      }
 
       const transaction = new Transaction();
 
