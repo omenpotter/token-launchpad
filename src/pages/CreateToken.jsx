@@ -71,10 +71,16 @@ export default function CreateTokenPage() {
   const handleApproveTransaction = async () => {
     setApprovalLoading(true);
     try {
+      // Initialize web3 connection
+      if (!web3Service.connection) {
+        web3Service.initConnection(network);
+      }
+
       // Step 1: Upload metadata to IPFS if metadata fields are provided
       let metadataUri = null;
       if (tokenName && tokenSymbol && (tokenDescription || tokenLogo || tokenWebsite)) {
         try {
+          console.log('[CreateToken] Uploading metadata to IPFS...');
           const metadataResponse = await base44.functions.invoke('uploadMetadataToIPFS', {
             name: tokenName,
             symbol: tokenSymbol,
@@ -86,13 +92,15 @@ export default function CreateTokenPage() {
           });
           
           metadataUri = metadataResponse.data?.metadataUri || null;
-          console.log('Metadata uploaded:', metadataUri);
+          console.log('[CreateToken] Metadata uploaded successfully:', metadataUri);
         } catch (metadataError) {
-          console.warn('Failed to upload metadata, continuing without it:', metadataError);
+          console.warn('[CreateToken] Failed to upload metadata, continuing without it:', metadataError.message);
+          // Continue without metadata - token can be created and metadata added later
         }
       }
 
-      // Step 2: Create token on-chain with metadata
+      // Step 2: Create token on-chain with proper metadata URI
+      console.log('[CreateToken] Creating token with metadata URI:', metadataUri);
       const result = await web3Service.createToken(network, {
         type: tokenType,
         name: tokenName,
@@ -104,10 +112,12 @@ export default function CreateTokenPage() {
         maxPerWallet: fairMintEnabled ? maxPerWallet : 0,
         transferFee: buyTax > 0 || sellTax > 0,
         transferFeeBasisPoints: Math.max(buyTax, sellTax) * 100,
-        transferFeeMaximum: BigInt(1000000)
+        transferFeeMaximum: BigInt(1000000),
+        nonTransferable: false
       }, TOKEN_CREATION_FEE, metadataUri);
 
       // Step 3: Save token to database
+      console.log('[CreateToken] Token created successfully, saving to database...');
       const newToken = {
         name: tokenName,
         symbol: tokenSymbol,
@@ -134,13 +144,16 @@ export default function CreateTokenPage() {
         totalMinted: 0,
         burned: 0,
         txHash: result.txHash,
+        associatedTokenAccount: result.associatedTokenAccount,
         creator: walletAddress,
-        metadataUri: metadataUri
+        metadataUri: metadataUri,
+        createdAt: new Date().toISOString()
       };
 
       await base44.entities.Token.create(newToken);
       await refetchTokens();
 
+      // Reset form
       setTokenName('');
       setTokenSymbol('');
       setTokenLogo('');
@@ -157,8 +170,13 @@ export default function CreateTokenPage() {
       setLockDuration(30);
       setLockReleaseDate('');
 
-      alert(`✅ Token created with metadata!\nAddress: ${result.tokenAddress}\nTx: ${result.txHash}${result.metadataTxHash ? `\nMetadata Tx: ${result.metadataTxHash}` : ''}`);
+      // Show success message
+      const successMessage = `✅ Token Created Successfully!\n\nName: ${tokenName}\nSymbol: ${tokenSymbol}\nAddress: ${result.tokenAddress}\nTransaction: ${result.txHash}${metadataUri ? `\nMetadata: ${metadataUri}` : '\n(Created without inline metadata)'}`;
+      alert(successMessage);
+      
+      console.log('[CreateToken] Token creation completed successfully');
     } catch (error) {
+      console.error('[CreateToken] Transaction error:', error);
       alert('Transaction failed: ' + error.message);
     } finally {
       setApprovalLoading(false);
