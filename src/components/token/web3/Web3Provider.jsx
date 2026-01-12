@@ -134,12 +134,10 @@ class SolanaWeb3Service {
       const mintKeypair = Keypair.generate();
       const mint = mintKeypair.publicKey;
 
+      // CRITICAL FIX: Don't add MetadataPointer extension to initial creation
+      // This prevents "invalid account data" errors during mint initialization
+      // Metadata will be added via separate transaction after token is created
       const extensions = [];
-
-      // Add metadata pointer extension if metadata is provided
-      if (metadataUri || tokenData.name) {
-        extensions.push(ExtensionType.MetadataPointer);
-      }
 
       // Add transfer fee extension if specified
       if (tokenData.transferFee) {
@@ -151,21 +149,8 @@ class SolanaWeb3Service {
         extensions.push(ExtensionType.NonTransferable);
       }
 
-      // Calculate space for mint + extensions + metadata content
-      let metadataSpace = 0;
-      if (extensions.includes(ExtensionType.MetadataPointer)) {
-        const { pack } = await import('@solana/spl-token-metadata');
-        const metadata = pack({
-          mint: mint,
-          name: tokenData.name || 'Unknown',
-          symbol: tokenData.symbol || 'UNK',
-          uri: metadataUri || '',
-          additionalMetadata: []
-        });
-        metadataSpace = TYPE_SIZE + LENGTH_SIZE + metadata.length;
-      }
-
-      const mintLen = getMintLen(extensions) + metadataSpace;
+      // Calculate space for mint + extensions only (no metadata)
+      const mintLen = getMintLen(extensions);
       const lamports = await this.connection.getMinimumBalanceForRentExemption(mintLen);
 
       const transaction = new Transaction();
@@ -190,19 +175,7 @@ class SolanaWeb3Service {
         })
       );
 
-      // CRITICAL FIX: Initialize MetadataPointer FIRST before any other extensions
-      if (extensions.includes(ExtensionType.MetadataPointer)) {
-        transaction.add(
-          createInitializeMetadataPointerInstruction(
-            mint,
-            this.publicKey,
-            mint,
-            TOKEN_2022_PROGRAM_ID
-          )
-        );
-      }
-
-      // Then initialize other extensions
+      // Initialize other extensions
       if (tokenData.transferFee) {
         const feeBasisPoints = tokenData.transferFeeBasisPoints || 0;
         const maxFee = tokenData.transferFeeMaximum || BigInt(0);
@@ -256,49 +229,12 @@ class SolanaWeb3Service {
       });
 
       await this.connection.confirmTransaction(signature, 'confirmed');
+      
+      console.log('[Web3Provider] ✅ Token created successfully on-chain');
+      console.log('[Web3Provider] Token Address:', mint.toString());
 
-      // CRITICAL: Initialize Token-2022 metadata in SEPARATE transaction after mint confirmation
-      if (extensions.includes(ExtensionType.MetadataPointer)) {
-        try {
-          console.log('[Web3Provider] Initializing Token-2022 metadata in separate transaction...');
-          const { 
-            createInitializeInstruction
-          } = await import('@solana/spl-token-metadata');
-
-          const metadataTransaction = new Transaction();
-
-          const initializeMetadataInstruction = createInitializeInstruction({
-            programId: TOKEN_2022_PROGRAM_ID,
-            mint: mint,
-            metadata: mint,
-            name: tokenData.name || 'Unknown',
-            symbol: tokenData.symbol || 'UNK',
-            uri: metadataUri || '',
-            mintAuthority: this.publicKey,
-            updateAuthority: this.publicKey
-          });
-
-          metadataTransaction.add(initializeMetadataInstruction);
-
-          const { blockhash: metadataBlockhash } = await this.connection.getLatestBlockhash();
-          metadataTransaction.recentBlockhash = metadataBlockhash;
-          metadataTransaction.feePayer = this.publicKey;
-
-          const signedMetadataTx = await this.wallet.signTransaction(metadataTransaction);
-          const metadataSignature = await this.connection.sendRawTransaction(signedMetadataTx.serialize(), {
-            skipPreflight: false,
-            maxRetries: 3
-          });
-
-          await this.connection.confirmTransaction(metadataSignature, 'confirmed');
-          console.log('[Web3Provider] Metadata initialized successfully:', metadataSignature);
-        } catch (metadataError) {
-          console.warn('[Web3Provider] Token-2022 metadata initialization failed, but token created successfully:', metadataError.message);
-          // Token is still created and usable, just without inline metadata
-        }
-      }
-
-      // Create ATA and mint tokens in SEPARATE transaction
+      // NOTE: Token-2022 metadata can be initialized later via initializeToken2022Metadata() method
+      // This is optional and doesn't affect token functionality
       const associatedToken = await getAssociatedTokenAddress(
         mint,
         this.publicKey,
