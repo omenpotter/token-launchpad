@@ -45,6 +45,8 @@ export default function X1TokenLauncher() {
   const [fairMintEnabled, setFairMintEnabled] = useState(false);
   const [maxPerWallet, setMaxPerWallet] = useState(1000);
   const [immutableToken, setImmutableToken] = useState(false);
+  const [buyTax, setBuyTax] = useState(0);
+  const [sellTax, setSellTax] = useState(0);
   
   // Approval Modal
   const [showApprovalModal, setShowApprovalModal] = useState(false);
@@ -164,10 +166,16 @@ export default function X1TokenLauncher() {
     if (!token) return;
 
     try {
+      // Initialize connection if needed
+      if (!web3Service.connection) {
+        web3Service.initConnection(currentNetwork);
+      }
+
       const result = await web3Service.burnTokens(
         token.mint,
         burnAmount,
-        token.decimals
+        token.decimals,
+        token.programId
       );
       
       const updatedTokens = createdTokens.map(t => {
@@ -185,6 +193,7 @@ export default function X1TokenLauncher() {
       
       alert(`✅ Burned ${burnAmount} ${token.symbol} tokens on-chain!\nTx: ${result.txHash}`);
     } catch (error) {
+      console.error('[X1TokenLauncher] Burn error:', error);
       alert('Burn failed: ' + error.message);
     }
   };
@@ -220,18 +229,53 @@ export default function X1TokenLauncher() {
     
     try {
       if (approvalData.type === 'token_creation') {
+        // Initialize connection
+        if (!web3Service.connection) {
+          web3Service.initConnection(currentNetwork);
+        }
+
+        // Upload metadata to IPFS if provided
+        let metadataUri = null;
+        if (tokenName && tokenSymbol && (tokenDescription || tokenLogo || tokenWebsite)) {
+          try {
+            console.log('[X1TokenLauncher] Uploading metadata to IPFS...');
+            const metadataResponse = await base44.functions.invoke('uploadMetadataToIPFS', {
+              name: tokenName,
+              symbol: tokenSymbol,
+              description: tokenDescription,
+              imageUrl: tokenLogo,
+              website: tokenWebsite,
+              telegram: tokenTelegram,
+              twitter: tokenTwitter
+            });
+            
+            metadataUri = metadataResponse.data?.metadataUri || null;
+            console.log('[X1TokenLauncher] Metadata uploaded:', metadataUri);
+          } catch (metadataError) {
+            console.warn('[X1TokenLauncher] Metadata upload failed, continuing without it:', metadataError.message);
+          }
+        }
+
+        // Create token
+        console.log('[X1TokenLauncher] Creating token with metadata URI:', metadataUri);
         const result = await web3Service.createToken(
           currentNetwork,
           {
+            type: tokenType,
             name: tokenName,
             symbol: tokenSymbol,
             decimals: decimals,
             supply: supply,
             lockMint: lockMintAuthority,
             immutable: immutableToken,
-            maxPerWallet: fairMintEnabled ? maxPerWallet : 0
+            maxPerWallet: fairMintEnabled ? maxPerWallet : 0,
+            transferFee: buyTax > 0 || sellTax > 0,
+            transferFeeBasisPoints: Math.max(buyTax, sellTax) * 100,
+            transferFeeMaximum: BigInt(1000000),
+            nonTransferable: false
           },
-          TOKEN_CREATION_FEE
+          TOKEN_CREATION_FEE,
+          metadataUri
         );
         
         const newToken = {
@@ -255,10 +299,15 @@ export default function X1TokenLauncher() {
           lockEnabled: lockEnabled,
           lockDuration: lockDuration,
           lockReleaseDate: lockReleaseDate,
+          buyTax: buyTax,
+          sellTax: sellTax,
           totalMinted: 0,
           burned: 0,
           txHash: result.txHash,
-          creator: walletAddress
+          associatedTokenAccount: result.associatedTokenAccount,
+          creator: walletAddress,
+          metadataUri: metadataUri,
+          createdAt: new Date().toISOString()
         };
         
         await base44.entities.Token.create(newToken);
@@ -280,10 +329,18 @@ export default function X1TokenLauncher() {
         setLockEnabled(false);
         setLockDuration(30);
         setLockReleaseDate('');
+        setBuyTax(0);
+        setSellTax(0);
         
-        alert(`✅ Token created on-chain!\nAddress: ${result.tokenAddress}\nTx: ${result.txHash}`);
+        const successMessage = `✅ Token Created Successfully!\n\nName: ${tokenName}\nSymbol: ${tokenSymbol}\nAddress: ${result.tokenAddress}\nTransaction: ${result.txHash}${metadataUri ? `\nMetadata: ${metadataUri}` : '\n(Created without inline metadata)'}`;
+        alert(successMessage);
       } 
       else if (approvalData.type === 'direct_mint') {
+        // Initialize connection
+        if (!web3Service.connection) {
+          web3Service.initConnection(currentNetwork);
+        }
+
         const token = createdTokens.find(t => t.id === parseInt(selectedTokenForMint));
         
         if (token.fairMint && token.maxPerWallet > 0) {
@@ -297,7 +354,8 @@ export default function X1TokenLauncher() {
           token.mint,
           mintAmount,
           token.decimals,
-          DIRECT_MINT_FEE
+          DIRECT_MINT_FEE,
+          token.programId
         );
         
         const updatedToken = {
@@ -313,6 +371,11 @@ export default function X1TokenLauncher() {
         alert(`✅ Minted ${mintAmount} tokens on-chain!\nTx: ${result.txHash}`);
       }
       else if (approvalData.type === 'presale_investment') {
+        // Initialize connection
+        if (!web3Service.connection) {
+          web3Service.initConnection(currentNetwork);
+        }
+
         const result = await web3Service.investInPresale(
           selectedPresale.presaleAddress || '0x1234567890123456789012345678901234567890',
           investAmount
@@ -322,10 +385,10 @@ export default function X1TokenLauncher() {
           if (p.id === selectedPresale.id) {
             return {
               ...p,
-              raised: p.raised + investAmount,
-              investors: p.investors + 1,
-              status: p.raised + investAmount >= p.hardCap ? 'completed' : 
-                      p.raised + investAmount >= p.softCap ? 'active' : p.status
+              raised: (p.raised || 0) + investAmount,
+              investors: (p.investors || 0) + 1,
+              status: (p.raised || 0) + investAmount >= p.hardCap ? 'completed' : 
+                      (p.raised || 0) + investAmount >= p.softCap ? 'active' : p.status
             };
           }
           return p;
@@ -337,6 +400,11 @@ export default function X1TokenLauncher() {
         alert(`✅ Investment successful!\nAmount: ${investAmount} ${getNativeCurrency()}\nTx: ${result.txHash}`);
       }
       else if (approvalData.type === 'presale_creation') {
+        // Initialize connection
+        if (!web3Service.connection) {
+          web3Service.initConnection(currentNetwork);
+        }
+
         const { presaleData } = approvalData;
         const token = presaleData.token;
         
@@ -377,7 +445,7 @@ export default function X1TokenLauncher() {
         alert(`✅ Presale created on-chain!\nAddress: ${result.presaleAddress}\nTx: ${result.txHash}`);
       }
     } catch (error) {
-      console.error('Transaction error:', error);
+      console.error('[X1TokenLauncher] Transaction error:', error);
       alert('Transaction failed: ' + error.message);
     } finally {
       setApprovalLoading(false);
@@ -465,6 +533,10 @@ export default function X1TokenLauncher() {
                 setMaxPerWallet={setMaxPerWallet}
                 immutableToken={immutableToken}
                 setImmutableToken={setImmutableToken}
+                buyTax={buyTax}
+                setBuyTax={setBuyTax}
+                sellTax={sellTax}
+                setSellTax={setSellTax}
                 walletConnected={walletConnected}
                 creationFee={TOKEN_CREATION_FEE}
                 currency={getNativeCurrency()}
