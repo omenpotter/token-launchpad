@@ -273,16 +273,6 @@ export default function CreateTokenPage() {
           setDecimals={setDecimals}
           supply={supply}
           setSupply={setSupply}
-          tokenLogo={tokenLogo}
-          setTokenLogo={setTokenLogo}
-          tokenWebsite={tokenWebsite}
-          setTokenWebsite={setTokenWebsite}
-          tokenTelegram={tokenTelegram}
-          setTokenTelegram={setTokenTelegram}
-          tokenTwitter={tokenTwitter}
-          setTokenTwitter={setTokenTwitter}
-          tokenDescription={tokenDescription}
-          setTokenDescription={setTokenDescription}
           lockEnabled={lockEnabled}
           setLockEnabled={setLockEnabled}
           lockDuration={lockDuration}
@@ -311,13 +301,13 @@ export default function CreateTokenPage() {
           onCreateToken={handleCreateToken}
         />
 
-        {/* Initialize Metadata Section */}
+        {/* Initialize Metadata Section - Shows after token creation */}
         {createdTokens.length > 0 && (
           <div className="mt-8 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl p-6 border border-blue-500/20">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-xl font-bold text-white mb-1">Initialize Metadata</h3>
-                <p className="text-slate-400">Add metadata to your existing tokens - Completely FREE!</p>
+                <h3 className="text-xl font-bold text-white mb-1">Token Metadata (Optional)</h3>
+                <p className="text-slate-400">Add metadata to your existing tokens - No Platform Charge!</p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-slate-300">Tokens without metadata: <strong className="text-yellow-400">{createdTokens.filter(t => !t.metadataInitialized).length}</strong></p>
@@ -327,7 +317,7 @@ export default function CreateTokenPage() {
             <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-3 mb-4 flex items-start gap-3">
               <div className="text-blue-400 mt-0.5">ℹ️</div>
               <div className="text-sm text-blue-300">
-                <strong>No Charge:</strong> Metadata initialization is completely free and doesn't affect your token's functionality. Your token is already created and tradeable!
+                <strong>No Platform Charge:</strong> Metadata initialization has no platform fees. You only pay blockchain gas fees. Your token is already created and tradeable!
               </div>
             </div>
 
@@ -338,7 +328,7 @@ export default function CreateTokenPage() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              Initialize Metadata on Existing Token
+              Initialize Metadata
             </button>
           </div>
         )}
@@ -362,7 +352,7 @@ export default function CreateTokenPage() {
             
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-4">
               <p className="text-sm text-blue-300">
-                ℹ️ <strong>No Platform Charge</strong> - Metadata initialization is completely FREE!
+                ℹ️ <strong>No Platform Charge</strong> - You only pay blockchain gas fees!
               </p>
             </div>
 
