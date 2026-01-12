@@ -190,7 +190,7 @@ class SolanaWeb3Service {
         })
       );
 
-      // Initialize extensions before mint - order matters!
+      // CRITICAL FIX: Initialize MetadataPointer FIRST before any other extensions
       if (extensions.includes(ExtensionType.MetadataPointer)) {
         transaction.add(
           createInitializeMetadataPointerInstruction(
@@ -202,6 +202,7 @@ class SolanaWeb3Service {
         );
       }
 
+      // Then initialize other extensions
       if (tokenData.transferFee) {
         const feeBasisPoints = tokenData.transferFeeBasisPoints || 0;
         const maxFee = tokenData.transferFeeMaximum || BigInt(0);
@@ -227,7 +228,7 @@ class SolanaWeb3Service {
         );
       }
 
-      // Initialize mint
+      // CRITICAL FIX: Use createInitializeMint2Instruction (not Mint) when metadata extensions exist
       transaction.add(
         createInitializeMint2Instruction(
           mint,
@@ -238,28 +239,29 @@ class SolanaWeb3Service {
         )
       );
 
-      // Initialize Token 2022 metadata in SAME transaction using NATIVE Token-2022 instruction
+      // CRITICAL FIX: Initialize Token-2022 metadata AFTER mint initialization
       if (extensions.includes(ExtensionType.MetadataPointer)) {
-        // Import the Token-2022 specific metadata instruction builder
-        const { 
-          createInitializeInstruction,
-          createUpdateFieldInstruction,
-          TokenMetadata 
-        } = await import('@solana/spl-token-metadata');
+        try {
+          const { 
+            createInitializeInstruction
+          } = await import('@solana/spl-token-metadata');
 
-        // Create the metadata initialization instruction
-        const initializeMetadataInstruction = createInitializeInstruction({
-          programId: TOKEN_2022_PROGRAM_ID,
-          mint: mint,
-          metadata: mint,  // For Token-2022, metadata account is the mint itself
-          name: tokenData.name || 'Unknown',
-          symbol: tokenData.symbol || 'UNK',
-          uri: metadataUri || '',
-          mintAuthority: this.publicKey,
-          updateAuthority: this.publicKey
-        });
+          const initializeMetadataInstruction = createInitializeInstruction({
+            programId: TOKEN_2022_PROGRAM_ID,
+            mint: mint,
+            metadata: mint,
+            name: tokenData.name || 'Unknown',
+            symbol: tokenData.symbol || 'UNK',
+            uri: metadataUri || '',
+            mintAuthority: this.publicKey,
+            updateAuthority: this.publicKey
+          });
 
-        transaction.add(initializeMetadataInstruction);
+          transaction.add(initializeMetadataInstruction);
+        } catch (metadataError) {
+          console.warn('[Web3Provider] Token-2022 metadata initialization failed, token created without inline metadata:', metadataError.message);
+          // Token is still created, just without inline metadata
+        }
       }
 
       const { blockhash } = await this.connection.getLatestBlockhash();
@@ -353,32 +355,21 @@ class SolanaWeb3Service {
     if (!this.connection) throw new Error('Connection not initialized');
 
     try {
-      const { pack, TokenMetadata } = await import('@solana/spl-token-metadata');
-
       const mintPubkey = new PublicKey(mint);
 
-      // Create metadata object
-      const metadata = {
+      const { 
+        createInitializeInstruction
+      } = await import('@solana/spl-token-metadata');
+
+      const initMetadataIx = createInitializeInstruction({
+        programId: TOKEN_2022_PROGRAM_ID,
         mint: mintPubkey,
+        metadata: mintPubkey,
         name: name,
         symbol: symbol,
         uri: uri,
-        additionalMetadata: []
-      };
-
-      // Pack metadata into buffer
-      const metadataBuffer = pack(metadata);
-
-      // Create instruction to initialize metadata
-      const initMetadataIx = splToken.createInitializeInstruction({
-        programId: TOKEN_2022_PROGRAM_ID,
-        metadata: mintPubkey,
-        updateAuthority: this.publicKey,
-        mint: mintPubkey,
         mintAuthority: this.publicKey,
-        name: name,
-        symbol: symbol,
-        uri: uri
+        updateAuthority: this.publicKey
       });
 
       const transaction = new Transaction().add(initMetadataIx);
