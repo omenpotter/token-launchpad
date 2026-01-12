@@ -239,30 +239,9 @@ class SolanaWeb3Service {
         )
       );
 
-      // CRITICAL FIX: Initialize Token-2022 metadata AFTER mint initialization
-      if (extensions.includes(ExtensionType.MetadataPointer)) {
-        try {
-          const { 
-            createInitializeInstruction
-          } = await import('@solana/spl-token-metadata');
-
-          const initializeMetadataInstruction = createInitializeInstruction({
-            programId: TOKEN_2022_PROGRAM_ID,
-            mint: mint,
-            metadata: mint,
-            name: tokenData.name || 'Unknown',
-            symbol: tokenData.symbol || 'UNK',
-            uri: metadataUri || '',
-            mintAuthority: this.publicKey,
-            updateAuthority: this.publicKey
-          });
-
-          transaction.add(initializeMetadataInstruction);
-        } catch (metadataError) {
-          console.warn('[Web3Provider] Token-2022 metadata initialization failed, token created without inline metadata:', metadataError.message);
-          // Token is still created, just without inline metadata
-        }
-      }
+      // NOTE: Token-2022 metadata will be initialized in a separate transaction after mint is confirmed
+      // This prevents "invalid account data" errors that occur when trying to initialize metadata 
+      // before the mint account is fully settled on-chain
 
       const { blockhash } = await this.connection.getLatestBlockhash();
       transaction.recentBlockhash = blockhash;
@@ -277,6 +256,47 @@ class SolanaWeb3Service {
       });
 
       await this.connection.confirmTransaction(signature, 'confirmed');
+
+      // CRITICAL: Initialize Token-2022 metadata in SEPARATE transaction after mint confirmation
+      if (extensions.includes(ExtensionType.MetadataPointer)) {
+        try {
+          console.log('[Web3Provider] Initializing Token-2022 metadata in separate transaction...');
+          const { 
+            createInitializeInstruction
+          } = await import('@solana/spl-token-metadata');
+
+          const metadataTransaction = new Transaction();
+
+          const initializeMetadataInstruction = createInitializeInstruction({
+            programId: TOKEN_2022_PROGRAM_ID,
+            mint: mint,
+            metadata: mint,
+            name: tokenData.name || 'Unknown',
+            symbol: tokenData.symbol || 'UNK',
+            uri: metadataUri || '',
+            mintAuthority: this.publicKey,
+            updateAuthority: this.publicKey
+          });
+
+          metadataTransaction.add(initializeMetadataInstruction);
+
+          const { blockhash: metadataBlockhash } = await this.connection.getLatestBlockhash();
+          metadataTransaction.recentBlockhash = metadataBlockhash;
+          metadataTransaction.feePayer = this.publicKey;
+
+          const signedMetadataTx = await this.wallet.signTransaction(metadataTransaction);
+          const metadataSignature = await this.connection.sendRawTransaction(signedMetadataTx.serialize(), {
+            skipPreflight: false,
+            maxRetries: 3
+          });
+
+          await this.connection.confirmTransaction(metadataSignature, 'confirmed');
+          console.log('[Web3Provider] Metadata initialized successfully:', metadataSignature);
+        } catch (metadataError) {
+          console.warn('[Web3Provider] Token-2022 metadata initialization failed, but token created successfully:', metadataError.message);
+          // Token is still created and usable, just without inline metadata
+        }
+      }
 
       // Create ATA and mint tokens in SEPARATE transaction
       const associatedToken = await getAssociatedTokenAddress(
@@ -365,9 +385,9 @@ class SolanaWeb3Service {
         programId: TOKEN_2022_PROGRAM_ID,
         mint: mintPubkey,
         metadata: mintPubkey,
-        name: name,
-        symbol: symbol,
-        uri: uri,
+        name: name || 'Unknown',
+        symbol: symbol || 'UNK',
+        uri: uri || '',
         mintAuthority: this.publicKey,
         updateAuthority: this.publicKey
       });
@@ -379,12 +399,17 @@ class SolanaWeb3Service {
       transaction.feePayer = this.publicKey;
 
       const signedTx = await this.wallet.signTransaction(transaction);
-      const signature = await this.connection.sendRawTransaction(signedTx.serialize());
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize(), {
+        skipPreflight: false,
+        maxRetries: 3
+      });
+      
       await this.connection.confirmTransaction(signature, 'confirmed');
 
+      console.log('[Web3Provider] Metadata initialization successful:', signature);
       return signature;
     } catch (error) {
-      console.error('Error initializing Token-2022 metadata:', error);
+      console.error('[Web3Provider] Error initializing Token-2022 metadata:', error);
       throw error;
     }
   }
