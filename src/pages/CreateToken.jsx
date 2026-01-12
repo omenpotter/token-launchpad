@@ -10,6 +10,7 @@ import SharedHeader from '../components/token/SharedHeader';
 import SharedFooter from '../components/token/SharedFooter';
 import WalletApprovalModal from '../components/token/WalletApprovalModal';
 import CreateTokenTab from '../components/token/CreateTokenTab';
+import AIDescriptionGenerator from '../components/token/AIDescriptionGenerator';
 import { web3Service } from '../components/token/web3/Web3Provider';
 
 export default function CreateTokenPage() {
@@ -310,6 +311,18 @@ export default function CreateTokenPage() {
           currency="XNT"
           onCreateToken={handleCreateToken}
         />
+
+        {/* AI Description Generator - Shows after token creation */}
+        {createdTokens.length > 0 && (
+          <div className="mt-8">
+            <AIDescriptionGenerator
+              tokenName={tokenName}
+              tokenSymbol={tokenSymbol}
+              tokenWebsite={tokenWebsite}
+              onApplyDescription={setTokenDescription}
+            />
+          </div>
+        )}
 
         {/* Initialize Metadata Section - Shows after token creation */}
         {createdTokens.length > 0 && (
