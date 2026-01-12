@@ -312,21 +312,18 @@ export default function CreateTokenPage() {
           onCreateToken={handleCreateToken}
         />
 
-        {/* AI Description Generator - Shows after token creation */}
-        {createdTokens.length > 0 && (
-          <div className="mt-8">
-            <AIDescriptionGenerator
-              tokenName={tokenName}
-              tokenSymbol={tokenSymbol}
-              tokenWebsite={tokenWebsite}
-              onApplyDescription={setTokenDescription}
-            />
-          </div>
-        )}
+        {/* AI Description Generator */}
+        <div className="mt-8">
+          <AIDescriptionGenerator
+            tokenName={tokenName}
+            tokenSymbol={tokenSymbol}
+            tokenWebsite={tokenWebsite}
+            onApplyDescription={setTokenDescription}
+          />
+        </div>
 
-        {/* Initialize Metadata Section - Shows after token creation */}
-        {createdTokens.length > 0 && (
-          <div className="mt-8 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl p-6 border border-blue-500/20">
+        {/* Initialize Metadata Section */}
+        <div className="mt-8 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl p-6 border border-blue-500/20">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-xl font-bold text-white mb-1">Token Metadata (Optional)</h3>
@@ -410,7 +407,6 @@ export default function CreateTokenPage() {
               Initialize Metadata
             </button>
           </div>
-        )}
       </main>
 
       <SharedFooter />
