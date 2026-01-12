@@ -331,6 +331,62 @@ export default function CreateTokenPage() {
               </div>
             </div>
 
+            {/* Metadata Input Fields */}
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Logo URL</label>
+                <input
+                  type="url"
+                  value={tokenLogo}
+                  onChange={(e) => setTokenLogo(e.target.value)}
+                  placeholder="https://..."
+                  className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Website</label>
+                  <input
+                    type="url"
+                    value={tokenWebsite}
+                    onChange={(e) => setTokenWebsite(e.target.value)}
+                    placeholder="https://yourtoken.com"
+                    className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Telegram</label>
+                  <input
+                    type="url"
+                    value={tokenTelegram}
+                    onChange={(e) => setTokenTelegram(e.target.value)}
+                    placeholder="https://t.me/yourtoken"
+                    className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Twitter/X</label>
+                  <input
+                    type="url"
+                    value={tokenTwitter}
+                    onChange={(e) => setTokenTwitter(e.target.value)}
+                    placeholder="https://x.com/yourtoken"
+                    className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Description</label>
+                <textarea
+                  value={tokenDescription}
+                  onChange={(e) => setTokenDescription(e.target.value)}
+                  placeholder="Describe your token..."
+                  rows={3}
+                  className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition resize-none"
+                />
+              </div>
+            </div>
+
             <button
               onClick={() => setShowMetadataModal(true)}
               className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-xl transition font-medium flex items-center justify-center gap-2"
