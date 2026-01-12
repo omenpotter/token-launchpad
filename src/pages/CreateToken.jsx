@@ -273,6 +273,16 @@ export default function CreateTokenPage() {
           setDecimals={setDecimals}
           supply={supply}
           setSupply={setSupply}
+          tokenLogo={tokenLogo}
+          setTokenLogo={setTokenLogo}
+          tokenWebsite={tokenWebsite}
+          setTokenWebsite={setTokenWebsite}
+          tokenTelegram={tokenTelegram}
+          setTokenTelegram={setTokenTelegram}
+          tokenTwitter={tokenTwitter}
+          setTokenTwitter={setTokenTwitter}
+          tokenDescription={tokenDescription}
+          setTokenDescription={setTokenDescription}
           lockEnabled={lockEnabled}
           setLockEnabled={setLockEnabled}
           lockDuration={lockDuration}
