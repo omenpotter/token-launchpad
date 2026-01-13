@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useWallet } from '../components/token/WalletContext';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Zap, Flame, TrendingUp, Coins, Layers, Plus } from 'lucide-react';
 import SharedHeader from '../components/token/SharedHeader';
 import SharedFooter from '../components/token/SharedFooter';
 import WalletApprovalModal from '../components/token/WalletApprovalModal';
@@ -252,14 +252,71 @@ export default function CreateTokenPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       <SharedHeader />
 
-      <main className="max-w-6xl mx-auto px-4 py-6">
-        <Link
-          to={createPageUrl('Minting')}
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Minting</span>
-        </Link>
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        <div className="flex gap-6">
+          {/* Left Sidebar Navigation */}
+          <aside className="w-64 flex-shrink-0">
+            <div className="sticky top-24 space-y-3">
+              <Link
+                to={createPageUrl('Minting')}
+                className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition mb-4"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Minting</span>
+              </Link>
+              
+              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+                <h3 className="text-sm font-semibold text-slate-400 mb-3 uppercase">Navigation</h3>
+                <nav className="space-y-2">
+                  <Link
+                    to={createPageUrl('CreateToken')}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-700/50 text-white transition"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="text-sm font-medium">Create Token</span>
+                  </Link>
+                  <Link
+                    to={createPageUrl('Dashboard')}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700/50 text-slate-300 hover:text-white transition"
+                  >
+                    <Layers className="w-4 h-4" />
+                    <span className="text-sm font-medium">Dashboard</span>
+                  </Link>
+                  <Link
+                    to={createPageUrl('Launchpad')}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700/50 text-slate-300 hover:text-white transition"
+                  >
+                    <Flame className="w-4 h-4" />
+                    <span className="text-sm font-medium">Launchpad</span>
+                  </Link>
+                  <Link
+                    to={createPageUrl('LiquidityPool')}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700/50 text-slate-300 hover:text-white transition"
+                  >
+                    <Coins className="w-4 h-4" />
+                    <span className="text-sm font-medium">Liquidity Pool</span>
+                  </Link>
+                  <Link
+                    to={createPageUrl('Trade')}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700/50 text-slate-300 hover:text-white transition"
+                  >
+                    <TrendingUp className="w-4 h-4" />
+                    <span className="text-sm font-medium">Trade</span>
+                  </Link>
+                  <Link
+                    to={createPageUrl('TokenVerification')}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700/50 text-slate-300 hover:text-white transition"
+                  >
+                    <Zap className="w-4 h-4" />
+                    <span className="text-sm font-medium">Token Verification</span>
+                  </Link>
+                </nav>
+              </div>
+            </div>
+          </aside>
+
+          {/* Main Content */}
+          <div className="flex-1 min-w-0">
         
         <CreateTokenTab
           network={network}
@@ -341,6 +398,21 @@ export default function CreateTokenPage() {
               </div>
             </div>
 
+            {/* Immutable Token Option */}
+            <div className="flex items-center justify-between p-4 bg-slate-700/30 rounded-xl mb-4">
+              <div className="flex items-center gap-3">
+                <Shield className="w-5 h-5 text-slate-400" />
+                <div>
+                  <p className="text-white font-medium">Immutable Token</p>
+                  <p className="text-xs text-slate-400">Freeze all token metadata permanently</p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={immutableToken} onChange={(e) => setImmutableToken(e.target.checked)} className="sr-only peer" />
+                <div className="w-11 h-6 bg-slate-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+              </label>
+            </div>
+
             {/* Metadata Input Fields */}
             <div className="space-y-4 mb-6">
               <div>
@@ -407,6 +479,7 @@ export default function CreateTokenPage() {
               Initialize Metadata
             </button>
           </div>
+        </div>
       </main>
 
       <SharedFooter />

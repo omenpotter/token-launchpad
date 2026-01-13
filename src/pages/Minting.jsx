@@ -200,7 +200,7 @@ export default function MintingPage() {
           {/* Main Content */}
           <div className="flex-1 min-w-0">
             <div className="mb-6">
-              <h1 className="text-3xl font-bold text-white mb-2">X1Space Launcher</h1>
+              <h1 className="text-3xl font-bold text-white mb-2">X1Nexus Launcher</h1>
               <p className="text-slate-400">Mint, burn, and manage tokens on X1 Mainnet</p>
             </div>
             

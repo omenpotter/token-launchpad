@@ -172,20 +172,6 @@ export default function CreateTokenTab({
             </label>
           </div>
 
-          <div className="flex items-center justify-between p-4 bg-slate-700/30 rounded-xl">
-            <div className="flex items-center gap-3">
-              <Shield className="w-5 h-5 text-slate-400" />
-              <div>
-                <p className="text-white font-medium">Immutable Token</p>
-                <p className="text-xs text-slate-400">Freeze all token metadata permanently</p>
-              </div>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" checked={immutableToken} onChange={(e) => setImmutableToken(e.target.checked)} className="sr-only peer" />
-              <div className="w-11 h-6 bg-slate-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
-            </label>
-          </div>
-
           <div className="p-4 bg-slate-700/30 rounded-xl space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">

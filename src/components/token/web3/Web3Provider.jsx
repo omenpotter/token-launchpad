@@ -37,7 +37,7 @@ const {
 
 // CRITICAL: Standardized dApp metadata - MUST be used in ALL wallet connects
 const DAPP_METADATA = {
-  name: 'X1Space',
+  name: 'X1Nexus',
   icon: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/5910381b6_711323c7-8ae9-4314-922d-ccab7986c619.jpg',
   url: 'https://x1slauncher.base44.app'
 };
@@ -48,10 +48,10 @@ class SolanaWeb3Service {
     this.wallet = null;
     this.publicKey = null;
     this.network = 'x1Testnet';
-    this.appName = 'X1Space';
+    this.appName = 'X1Nexus';
   }
 
-  initConnection(network, appName = 'X1Space') {
+  initConnection(network, appName = 'X1Nexus') {
     this.network = network;
     this.appName = appName;
     const config = NETWORK_CONFIG[network];
@@ -60,7 +60,7 @@ class SolanaWeb3Service {
   }
 
   // FIXED: Explicit branding metadata passed to wallet
-  async connectWallet(walletAdapter, appName = 'X1Space') {
+  async connectWallet(walletAdapter, appName = 'X1Nexus') {
     try {
       if (!walletAdapter) {
         throw new Error('No wallet adapter provided');

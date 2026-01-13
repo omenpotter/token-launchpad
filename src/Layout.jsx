@@ -5,7 +5,7 @@ import { WalletProvider } from './components/token/WalletContext';
 export default function Layout({ children, currentPageName }) {
   useEffect(() => {
     // Set document title for wallet detection
-    document.title = 'X1Space Launcher';
+    document.title = 'X1Nexus Launcher';
     
     // Set meta tags for dApp identity
     const setMetaTag = (property, content) => {
@@ -20,14 +20,14 @@ export default function Layout({ children, currentPageName }) {
     };
     
     // Standard dApp metadata
-    setMetaTag('og:title', 'X1Space');
-    setMetaTag('og:site_name', 'X1Space');
+    setMetaTag('og:title', 'X1Nexus');
+    setMetaTag('og:site_name', 'X1Nexus');
     setMetaTag('og:image', 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/5910381b6_711323c7-8ae9-4314-922d-ccab7986c619.jpg');
-    setMetaTag('application-name', 'X1Space');
-    setMetaTag('apple-mobile-web-app-title', 'X1Space');
-    
+    setMetaTag('application-name', 'X1Nexus');
+    setMetaTag('apple-mobile-web-app-title', 'X1Nexus');
+
     // Solana dApp standard metadata
-    setMetaTag('dapp:name', 'X1Space');
+    setMetaTag('dapp:name', 'X1Nexus');
     setMetaTag('dapp:icon', 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/5910381b6_711323c7-8ae9-4314-922d-ccab7986c619.jpg');
   }, []);
 
