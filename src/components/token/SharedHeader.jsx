@@ -40,10 +40,10 @@ export default function SharedHeader() {
           <div className="flex items-center justify-between">
             <Link to={createPageUrl('Minting')} className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl overflow-hidden">
-                <img src={X1_LOGO} alt="X1Space" className="w-full h-full object-cover" />
+                <img src={X1_LOGO} alt="X1Nexus" className="w-full h-full object-cover" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">X1Space Launcher</h1>
+                <h1 className="text-xl font-bold text-white">X1Nexus Launcher</h1>
                 <p className="text-xs text-slate-400">Create, mint & launch tokens</p>
               </div>
             </Link>
