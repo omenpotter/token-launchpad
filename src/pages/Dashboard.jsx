@@ -54,10 +54,7 @@ export default function DashboardPage() {
         
         <DashboardTab
           createdTokens={createdTokens}
-          setCreatedTokens={(updatedTokens) => {
-            // Update function - refetch will be called after DB updates
-            refetchTokens();
-          }}
+          refetchTokens={refetchTokens}
           network="x1Mainnet"
           onQuickAction={(action, tokenId) => {
             // Navigation handled by DashboardTab

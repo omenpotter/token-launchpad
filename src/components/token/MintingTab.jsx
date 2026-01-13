@@ -210,8 +210,17 @@ export default function MintingTab({
                 <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-300">Minting Fee:</span>
-                    <span className="text-white font-semibold">{mintFee} {currency}</span>
+                    <span className="text-white font-semibold">
+                      {selectedToken.mintingFee ?? 0} {currency}
+                      {(selectedToken.mintingFee ?? 0) === 0 && <span className="text-green-400 ml-2">✨ Free!</span>}
+                    </span>
                   </div>
+                  {selectedToken.fairMint && selectedToken.mintingMaxPerWallet > 0 && (
+                    <div className="flex justify-between text-sm mt-2 pt-2 border-t border-blue-500/20">
+                      <span className="text-slate-300">Max Per Wallet:</span>
+                      <span className="text-white font-semibold">{selectedToken.mintingMaxPerWallet.toLocaleString()}</span>
+                    </div>
+                  )}
                 </div>
 
                 <button

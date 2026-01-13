@@ -317,6 +317,10 @@ export default function CreateTokenPage() {
 
           {/* Main Content */}
           <div className="flex-1 min-w-0">
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-white mb-2">Create New Token</h1>
+              <p className="text-slate-400">Deploy your own Token-2022 on X1 Mainnet</p>
+            </div>
         
         <CreateTokenTab
           network={network}

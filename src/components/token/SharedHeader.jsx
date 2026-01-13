@@ -5,7 +5,7 @@ import { createPageUrl } from '@/utils';
 import { useWallet } from './WalletContext';
 import WalletConnectModal from './WalletConnectModal';
 
-const X1_LOGO = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/5910381b6_711323c7-8ae9-4314-922d-ccab7986c619.jpg";
+const X1_LOGO = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/49353c1ee_e348d563-ad78-48c8-929e-9e0f75d7a2a3.jpg";
 const TELEGRAM_ICON = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/3166166d8_Telegram_2019_Logosvg1.jpg";
 const TWITTER_ICON = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/2e2eecb01_31AGs2bX7mL.png";
 

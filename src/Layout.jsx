@@ -20,15 +20,15 @@ export default function Layout({ children, currentPageName }) {
     };
     
     // Standard dApp metadata
-    setMetaTag('og:title', 'X1Nexus');
-    setMetaTag('og:site_name', 'X1Nexus');
-    setMetaTag('og:image', 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/5910381b6_711323c7-8ae9-4314-922d-ccab7986c619.jpg');
+    setMetaTag('og:title', 'X1Nexus Launcher');
+    setMetaTag('og:site_name', 'X1Nexus Launcher');
+    setMetaTag('og:image', 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/49353c1ee_e348d563-ad78-48c8-929e-9e0f75d7a2a3.jpg');
     setMetaTag('application-name', 'X1Nexus');
     setMetaTag('apple-mobile-web-app-title', 'X1Nexus');
 
     // Solana dApp standard metadata
-    setMetaTag('dapp:name', 'X1Nexus');
-    setMetaTag('dapp:icon', 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/5910381b6_711323c7-8ae9-4314-922d-ccab7986c619.jpg');
+    setMetaTag('dapp:name', 'X1Nexus Launcher');
+    setMetaTag('dapp:icon', 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/695ece00f88266143b4441ac/49353c1ee_e348d563-ad78-48c8-929e-9e0f75d7a2a3.jpg');
   }, []);
 
   return (

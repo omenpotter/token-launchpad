@@ -2,13 +2,16 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
 import { Link } from 'react-router-dom';
+import { useWallet } from './WalletContext';
 import { Coins, ExternalLink, Clock, Shield, Copy, CheckCircle, Zap, Flame, Rocket, Eye, Edit2, Lock, Users, TrendingUp, BarChart3, Droplets, Send } from 'lucide-react';
 import { motion } from 'framer-motion';
 import EnhancedTokenAnalytics from './EnhancedTokenAnalytics';
 import LiquidityManagement from './LiquidityManagement';
 import SendToMintingModal from './SendToMintingModal';
+import { web3Service } from './web3/Web3Provider';
 
-export default function DashboardTab({ createdTokens, setCreatedTokens, network, onQuickAction, presales }) {
+export default function DashboardTab({ createdTokens, refetchTokens, network, onQuickAction, presales }) {
+  const { walletConnected } = useWallet();
   const [copiedId, setCopiedId] = useState(null);
   const [expandedTokenId, setExpandedTokenId] = useState(null);
   const [editingTokenId, setEditingTokenId] = useState(null);
@@ -60,8 +63,8 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
       await base44.entities.Token.update(editingTokenId, editValues);
       
       // Trigger refetch
-      if (typeof setCreatedTokens === 'function') {
-        await setCreatedTokens();
+      if (typeof refetchTokens === 'function') {
+        await refetchTokens();
       }
       
       setEditingTokenId(null);
@@ -79,8 +82,8 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
       });
       };
 
-      const handleSendToMinting = async (token, settings) => {
-      try {
+  const handleSendToMinting = async (token, settings) => {
+    try {
       await base44.entities.Token.update(token.id, {
         sentForMinting: true,
         mintingMaxPerWallet: settings.maxPerWallet,
@@ -88,15 +91,15 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
         mintingFee: settings.mintingFee ?? 0
       });
 
-      const updatedTokens = createdTokens.map(t => 
-        t.id === token.id ? { ...t, sentForMinting: true, mintingMaxPerWallet: settings.maxPerWallet, fairMint: settings.enableFairMint, mintingFee: settings.mintingFee ?? 0 } : t
-      );
-      setCreatedTokens(updatedTokens);
-      alert(`✅ ${token.symbol} sent to Minting Page!`);
-      } catch (error) {
-      alert('Failed to send token: ' + error.message);
+      if (typeof refetchTokens === 'function') {
+        await refetchTokens();
       }
-      };
+      
+      alert(`✅ ${token.symbol} sent to Minting Page!`);
+    } catch (error) {
+      alert('Failed to send token: ' + error.message);
+    }
+  };
 
       if (createdTokens.length === 0) {
     return (
@@ -209,7 +212,49 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
               {/* Quick Actions */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
                 <button
-                  onClick={() => onQuickAction('mint', token.id)}
+                  onClick={async () => {
+                    if (!walletConnected) {
+                      alert('Please connect your wallet first');
+                      return;
+                    }
+
+                    const mintAmount = prompt(`Enter amount of ${token.symbol} to mint:`);
+                    if (!mintAmount || isNaN(mintAmount) || parseFloat(mintAmount) <= 0) {
+                      alert('Invalid mint amount');
+                      return;
+                    }
+
+                    try {
+                      if (!web3Service.connection) {
+                        web3Service.initConnection(network);
+                      }
+
+                      const programId = token.type === 'TOKEN2022' 
+                        ? 'TokenzQdBNbNbGKPFXCWuBvf9Ss623VQ5DA' 
+                        : 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+                      
+                      const result = await web3Service.mintTokens(
+                        token.mint, 
+                        parseFloat(mintAmount), 
+                        token.decimals, 
+                        0, 
+                        programId
+                      );
+                      
+                      await base44.entities.Token.update(token.id, {
+                        totalMinted: (token.totalMinted || 0) + parseFloat(mintAmount),
+                        supply: token.supply + parseFloat(mintAmount)
+                      });
+
+                      if (typeof refetchTokens === 'function') {
+                        await refetchTokens();
+                      }
+
+                      alert(`✅ Minted ${mintAmount} ${token.symbol} successfully!\nTx: ${result.txHash}`);
+                    } catch (error) {
+                      alert('Failed to mint tokens: ' + error.message);
+                    }
+                  }}
                   className="flex items-center justify-center gap-2 px-3 py-2 bg-green-500/10 hover:bg-green-500/20 text-green-400 rounded-lg transition text-sm font-medium"
                 >
                   <Zap className="w-4 h-4" />
@@ -217,6 +262,11 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
                 </button>
                 <button
                   onClick={async () => {
+                    if (!walletConnected) {
+                      alert('Please connect your wallet first');
+                      return;
+                    }
+
                     const burnAmount = prompt(`Enter amount of ${token.symbol} to burn:`);
                     if (!burnAmount || isNaN(burnAmount) || parseFloat(burnAmount) <= 0) {
                       alert('Invalid burn amount');
@@ -224,16 +274,31 @@ export default function DashboardTab({ createdTokens, setCreatedTokens, network,
                     }
 
                     try {
-                      await base44.entities.Token.update(token.id, {
-                        supply: Math.max(0, token.supply - parseFloat(burnAmount)),
-                        burned: (token.burned || 0) + parseFloat(burnAmount)
-                      });
-
-                      if (typeof setCreatedTokens === 'function') {
-                        await setCreatedTokens();
+                      if (!web3Service.connection) {
+                        web3Service.initConnection(network);
                       }
 
-                      alert(`✅ Burned ${burnAmount} ${token.symbol} successfully!`);
+                      const programId = token.type === 'TOKEN2022' 
+                        ? 'TokenzQdBNbNbGKPFXCWuBvf9Ss623VQ5DA' 
+                        : 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+                      
+                      const result = await web3Service.burnTokens(
+                        token.mint, 
+                        parseFloat(burnAmount), 
+                        token.decimals, 
+                        programId
+                      );
+
+                      await base44.entities.Token.update(token.id, {
+                        burned: (token.burned || 0) + parseFloat(burnAmount),
+                        supply: Math.max(0, token.supply - parseFloat(burnAmount))
+                      });
+
+                      if (typeof refetchTokens === 'function') {
+                        await refetchTokens();
+                      }
+
+                      alert(`✅ Burned ${burnAmount} ${token.symbol} successfully!\nTx: ${result.txHash}`);
                     } catch (error) {
                       alert('Failed to burn tokens: ' + error.message);
                     }
