@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useWallet } from '../components/token/WalletContext';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { ArrowLeft, Zap, Flame, TrendingUp, Coins, Layers, Plus } from 'lucide-react';
+import { ArrowLeft, Zap, Flame, TrendingUp, Coins, Layers, Plus, Shield } from 'lucide-react';
 import SharedHeader from '../components/token/SharedHeader';
 import SharedFooter from '../components/token/SharedFooter';
 import WalletApprovalModal from '../components/token/WalletApprovalModal';
@@ -478,6 +478,7 @@ export default function CreateTokenPage() {
               </svg>
               Initialize Metadata
             </button>
+          </div>
           </div>
         </div>
       </main>
