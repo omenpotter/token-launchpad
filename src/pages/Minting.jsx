@@ -48,8 +48,21 @@ export default function MintingPage() {
       return;
     }
 
-    const token = createdTokens.find(t => t.id === parseInt(selectedTokenForMint));
-    if (!token) return;
+    // Fetch from mintingTokens query used by MintingTab
+    const { data: mintingTokens = [] } = useQuery({
+      queryKey: ['minting-tokens'],
+      queryFn: async () => {
+        const tokens = await base44.entities.Token.filter({ sentForMinting: true });
+        return tokens.filter(t => t.network === 'x1Mainnet');
+      },
+      initialData: []
+    });
+
+    const token = mintingTokens.find(t => t.id?.toString() === selectedTokenForMint);
+    if (!token) {
+      alert('Token not found');
+      return;
+    }
 
     // Use token's custom minting fee (default to 0 if not set)
     const userMintFee = token.mintingFee ?? 0;
@@ -100,7 +113,10 @@ export default function MintingPage() {
   const handleApproveTransaction = async () => {
     setApprovalLoading(true);
     try {
-      const token = createdTokens.find(t => t.id === parseInt(selectedTokenForMint));
+      // Fetch all minting tokens
+      const tokens = await base44.entities.Token.filter({ sentForMinting: true });
+      const mintingTokens = tokens.filter(t => t.network === 'x1Mainnet');
+      const token = mintingTokens.find(t => t.id?.toString() === selectedTokenForMint);
       
       if (token.fairMint && token.maxPerWallet > 0) {
         const totalMintedByUser = (token.totalMinted || 0) + mintAmount;

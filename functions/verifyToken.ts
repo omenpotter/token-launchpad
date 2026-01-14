@@ -281,20 +281,9 @@ Deno.serve(async (req) => {
     
     const base44 = createClientFromRequest(req);
     
-    // ✅ Make auth check more resilient
-    let user;
-    try {
-      user = await base44.auth.me();
-    } catch (authError) {
-      console.error('[verifyToken] Auth error:', authError);
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    console.log('[verifyToken] User authenticated:', user.email);
+    // ✅ Skip auth check for public verification endpoint
+    // Token verification should be accessible to everyone
+    console.log('[verifyToken] Processing token verification (public endpoint)');
 
     // ✅ Better request parsing
     let body;

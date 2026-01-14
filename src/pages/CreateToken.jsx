@@ -317,6 +317,14 @@ export default function CreateTokenPage() {
 
           {/* Main Content */}
           <div className="flex-1 min-w-0">
+            <Link
+              to={createPageUrl('Minting')}
+              className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition mb-4"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Minting</span>
+            </Link>
+
             <div className="mb-6">
               <h1 className="text-3xl font-bold text-white mb-2">Create New Token</h1>
               <p className="text-slate-400">Deploy your own Token-2022 on X1 Mainnet</p>
@@ -415,6 +423,38 @@ export default function CreateTokenPage() {
                 <input type="checkbox" checked={immutableToken} onChange={(e) => setImmutableToken(e.target.checked)} className="sr-only peer" />
                 <div className="w-11 h-6 bg-slate-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
               </label>
+            </div>
+
+            {/* Token Selection for Metadata */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-300 mb-2">Select Token for Metadata</label>
+              <select
+                value={selectedTokenForMetadata?.id || ''}
+                onChange={(e) => {
+                  const token = createdTokens.find(t => t.id === parseInt(e.target.value));
+                  setSelectedTokenForMetadata(token);
+                  if (token) {
+                    setTokenName(token.name);
+                    setTokenSymbol(token.symbol);
+                    setTokenLogo(token.logo || '');
+                    setTokenWebsite(token.website || '');
+                    setTokenTelegram(token.telegram || '');
+                    setTokenTwitter(token.twitter || '');
+                    setTokenDescription(token.description || '');
+                  }
+                }}
+                className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
+              >
+                <option value="">Select a token...</option>
+                {createdTokens.filter(t => !t.metadataInitialized).map(token => (
+                  <option key={token.id} value={token.id}>
+                    {token.name} ({token.symbol}) - {token.mint.slice(0, 8)}...
+                  </option>
+                ))}
+              </select>
+              {createdTokens.filter(t => !t.metadataInitialized).length === 0 && (
+                <p className="text-sm text-slate-400 mt-2">All your tokens already have metadata initialized</p>
+              )}
             </div>
 
             {/* Metadata Input Fields */}

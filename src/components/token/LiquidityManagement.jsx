@@ -33,7 +33,7 @@ export default function LiquidityManagement({ token, currency }) {
           </Link>
 
           <a
-            href={`https://xdex.xyz/pool/${token.mint}`}
+            href="https://app.xdex.xyz/liquidity"
             target="_blank"
             rel="noopener noreferrer"
             className="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2"

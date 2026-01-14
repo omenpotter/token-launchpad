@@ -229,12 +229,17 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
                         web3Service.initConnection(network);
                       }
 
+                      // Validate mint address
+                      if (!token.mint || typeof token.mint !== 'string') {
+                        throw new Error('Invalid token mint address');
+                      }
+
                       const programId = token.type === 'TOKEN2022' 
                         ? 'TokenzQdBNbNbGKPFXCWuBvf9Ss623VQ5DA' 
                         : 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
                       
                       const result = await web3Service.mintTokens(
-                        token.mint, 
+                        token.mint.trim(), 
                         parseFloat(mintAmount), 
                         token.decimals, 
                         0, 
@@ -278,12 +283,17 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
                         web3Service.initConnection(network);
                       }
 
+                      // Validate mint address
+                      if (!token.mint || typeof token.mint !== 'string') {
+                        throw new Error('Invalid token mint address');
+                      }
+
                       const programId = token.type === 'TOKEN2022' 
                         ? 'TokenzQdBNbNbGKPFXCWuBvf9Ss623VQ5DA' 
                         : 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
                       
                       const result = await web3Service.burnTokens(
-                        token.mint, 
+                        token.mint.trim(), 
                         parseFloat(burnAmount), 
                         token.decimals, 
                         programId
