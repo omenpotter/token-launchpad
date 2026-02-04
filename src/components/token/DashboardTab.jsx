@@ -30,14 +30,14 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const getExplorerUrl = (mint, tokenNetwork) => {
-    if (tokenNetwork === 'x1Testnet') {
-      return `https://explorer.mainnet.x1.xyz/address/${mint}?network=testnet`;
-    } else if (tokenNetwork === 'x1Mainnet') {
-      return \`https://explorer.mainnet.x1.xyz/address/\${mint}\`;
-    }
-    return '#';
-  };
+  cconst getExplorerUrl = (mint, tokenNetwork) => {
+  if (tokenNetwork === 'x1Testnet') {
+    return `https://explorer.mainnet.x1.xyz/address/${mint}?network=testnet`;
+  } else if (tokenNetwork === 'x1Mainnet') {
+    return `https://explorer.mainnet.x1.xyz/address/${mint}`;
+  }
+  return '#';
+};
 
   const toggleAdvancedOptions = (tokenId) => {
     setExpandedTokenId(expandedTokenId === tokenId ? null : tokenId);
