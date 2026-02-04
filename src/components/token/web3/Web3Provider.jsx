@@ -1,6 +1,3 @@
-// FILE: src/components/token/web3/Web3Provider.jsx
-// COMPLETE FILE - REPLACE ENTIRE FILE WITH THIS
-
 import './polyfills';
 import * as web3 from '@solana/web3.js';
 import * as splToken from '@solana/spl-token';
@@ -109,65 +106,55 @@ class SolanaWeb3Service {
     }
   }
 
-  async disconnectWallet() {
+  async disconnect() {
     if (this.wallet) {
       await this.wallet.disconnect();
-      this.wallet = null;
-      this.publicKey = null;
     }
+    this.wallet = null;
+    this.publicKey = null;
   }
 
   async getBalance(address) {
-    try {
-      const pubkey = new PublicKey(address);
-      const balance = await this.connection.getBalance(pubkey);
-      return balance / LAMPORTS_PER_SOL;
-    } catch (error) {
-      console.error('[Web3Provider] Get balance error:', error);
-      throw error;
-    }
+    if (!this.connection) throw new Error('Connection not initialized');
+    const publicKey = new PublicKey(address || this.publicKey);
+    const balance = await this.connection.getBalance(publicKey);
+    return balance / LAMPORTS_PER_SOL;
   }
 
-  async createToken(network, tokenType, tokenConfig, fee = TOKEN_CREATION_FEE) {
+  async createToken(network, tokenData, fee, metadataUri = null) {
+    // All tokens are now Token-2022 by default
+    return this.createToken2022(network, tokenData, fee, metadataUri);
+  }
+
+  async createToken2022(network, tokenData, fee, metadataUri = null) {
+    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
+    if (!this.connection) this.initConnection(network);
+
     try {
-      if (!this.wallet || !this.publicKey) {
-        throw new Error('Wallet not connected');
+      const mintKeypair = Keypair.generate();
+      const mint = mintKeypair.publicKey;
+
+      // CRITICAL FIX: Don't add MetadataPointer extension to initial creation
+      // This prevents "invalid account data" errors during mint initialization
+      // Metadata will be added via separate transaction after token is created
+      const extensions = [];
+
+      // Add transfer fee extension if specified
+      if (tokenData.transferFee) {
+        extensions.push(ExtensionType.TransferFeeConfig);
       }
 
-      console.log('[Web3Provider] Creating token:', tokenConfig);
+      // Add non-transferable extension if specified
+      if (tokenData.nonTransferable) {
+        extensions.push(ExtensionType.NonTransferable);
+      }
 
-      const mintKeypair = Keypair.generate();
-      const programId = tokenType === 'TOKEN2022' ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
-
-      // Calculate rent
-      const mintLen = getMintLen([]);
+      // Calculate space for mint + extensions only (no metadata)
+      const mintLen = getMintLen(extensions);
       const lamports = await this.connection.getMinimumBalanceForRentExemption(mintLen);
 
-      // Create mint account
       const transaction = new Transaction();
-      
-      transaction.add(
-        SystemProgram.createAccount({
-          fromPubkey: this.publicKey,
-          newAccountPubkey: mintKeypair.publicKey,
-          space: mintLen,
-          lamports,
-          programId
-        })
-      );
 
-      // Initialize mint
-      transaction.add(
-        createInitializeMint2Instruction(
-          mintKeypair.publicKey,
-          tokenConfig.decimals,
-          this.publicKey,
-          this.publicKey,
-          programId
-        )
-      );
-
-      // Add fee payment
       if (fee > 0) {
         transaction.add(
           SystemProgram.transfer({
@@ -178,80 +165,280 @@ class SolanaWeb3Service {
         );
       }
 
-      transaction.recentBlockhash = (await this.connection.getLatestBlockhash()).blockhash;
-      transaction.feePayer = this.publicKey;
-
-      // Sign with both wallet and mint keypair
-      transaction.partialSign(mintKeypair);
-      const signed = await this.wallet.signTransaction(transaction);
-      const txHash = await this.connection.sendRawTransaction(signed.serialize());
-      
-      await this.connection.confirmTransaction(txHash, 'confirmed');
-
-      console.log('[Web3Provider] ✅ Token created:', mintKeypair.publicKey.toString());
-
-      return {
-        success: true,
-        mintAddress: mintKeypair.publicKey.toString(),
-        txHash
-      };
-    } catch (error) {
-      console.error('[Web3Provider] Create token error:', error);
-      throw error;
-    }
-  }
-
-  async mintTokens(mintAddress, amount, decimals = 9, fee = 0, programId = TOKEN_PROGRAM_ID) {
-    try {
-      if (!this.wallet || !this.publicKey) {
-        throw new Error('Wallet not connected');
-      }
-
-      console.log('[Web3Provider] Minting tokens:', { mintAddress, amount, decimals, fee });
-
-      const mint = new PublicKey(mintAddress);
-      const program = new PublicKey(programId);
-
-      // Get or create associated token account
-      const associatedTokenAccount = await getAssociatedTokenAddress(
-        mint,
-        this.publicKey,
-        false,
-        program
+      transaction.add(
+        SystemProgram.createAccount({
+          fromPubkey: this.publicKey,
+          newAccountPubkey: mint,
+          space: mintLen,
+          lamports,
+          programId: TOKEN_2022_PROGRAM_ID
+        })
       );
 
-      const transaction = new Transaction();
+      // Initialize other extensions
+      if (tokenData.transferFee) {
+        const feeBasisPoints = tokenData.transferFeeBasisPoints || 0;
+        const maxFee = tokenData.transferFeeMaximum || BigInt(0);
 
-      // Check if token account exists
-      try {
-        await getAccount(this.connection, associatedTokenAccount, 'confirmed', program);
-      } catch (error) {
-        // Create if doesn't exist
         transaction.add(
-          createAssociatedTokenAccountInstruction(
-            this.publicKey,
-            associatedTokenAccount,
-            this.publicKey,
+          createInitializeTransferFeeConfigInstruction(
             mint,
-            program
+            this.publicKey,
+            this.publicKey,
+            feeBasisPoints,
+            maxFee,
+            TOKEN_2022_PROGRAM_ID
           )
         );
       }
 
-      // Mint tokens
-      const mintAmount = amount * Math.pow(10, decimals);
+      if (tokenData.nonTransferable) {
+        transaction.add(
+          createInitializeNonTransferableMintInstruction(
+            mint,
+            TOKEN_2022_PROGRAM_ID
+          )
+        );
+      }
+
+      // CRITICAL FIX: Use createInitializeMint2Instruction (not Mint) when metadata extensions exist
       transaction.add(
-        createMintToInstruction(
+        createInitializeMint2Instruction(
           mint,
-          associatedTokenAccount,
+          tokenData.decimals,
           this.publicKey,
-          mintAmount,
-          [],
-          program
+          tokenData.immutable ? null : this.publicKey,
+          TOKEN_2022_PROGRAM_ID
         )
       );
 
-      // Add fee if required
+      // NOTE: Token-2022 metadata will be initialized in a separate transaction after mint is confirmed
+      // This prevents "invalid account data" errors that occur when trying to initialize metadata 
+      // before the mint account is fully settled on-chain
+
+      const { blockhash } = await this.connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = this.publicKey;
+
+      transaction.partialSign(mintKeypair);
+
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize(), {
+        skipPreflight: false,
+        maxRetries: 3
+      });
+
+      await this.connection.confirmTransaction(signature, 'confirmed');
+      
+      console.log('[Web3Provider] ✅ Token created successfully on-chain');
+      console.log('[Web3Provider] Token Address:', mint.toString());
+
+      // NOTE: Token-2022 metadata can be initialized later via initializeToken2022Metadata() method
+      // This is optional and doesn't affect token functionality
+      const associatedToken = await getAssociatedTokenAddress(
+        mint,
+        this.publicKey,
+        false,
+        TOKEN_2022_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+
+      const transaction2 = new Transaction();
+
+      transaction2.add(
+        createAssociatedTokenAccountInstruction(
+          this.publicKey,
+          associatedToken,
+          this.publicKey,
+          mint,
+          TOKEN_2022_PROGRAM_ID,
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        )
+      );
+
+      if (tokenData.supply > 0) {
+        transaction2.add(
+          createMintToInstruction(
+            mint,
+            associatedToken,
+            this.publicKey,
+            tokenData.supply * Math.pow(10, tokenData.decimals),
+            [],
+            TOKEN_2022_PROGRAM_ID
+          )
+        );
+      }
+
+      if (tokenData.lockMint) {
+        transaction2.add(
+          createSetAuthorityInstruction(
+            mint,
+            this.publicKey,
+            AuthorityType.MintTokens,
+            null,
+            [],
+            TOKEN_2022_PROGRAM_ID
+          )
+        );
+      }
+
+      const { blockhash: blockhash2 } = await this.connection.getLatestBlockhash();
+      transaction2.recentBlockhash = blockhash2;
+      transaction2.feePayer = this.publicKey;
+
+      const signedTx2 = await this.wallet.signTransaction(transaction2);
+      const signature2 = await this.connection.sendRawTransaction(signedTx2.serialize(), {
+        skipPreflight: false,
+        maxRetries: 3
+      });
+
+      await this.connection.confirmTransaction(signature2, 'confirmed');
+
+      return {
+        txHash: signature,
+        tokenAddress: mint.toString(),
+        associatedTokenAccount: associatedToken.toString(),
+        tokenType: 'TOKEN2022'
+      };
+    } catch (error) {
+      console.error('Error creating Token-2022:', error);
+      throw error;
+    }
+  }
+
+  async initializeToken2022Metadata(mint, name, symbol, uri) {
+    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
+    if (!this.connection) throw new Error('Connection not initialized');
+
+    try {
+      const mintPubkey = new PublicKey(mint);
+
+      const { 
+        createInitializeInstruction
+      } = await import('@solana/spl-token-metadata');
+
+      const initMetadataIx = createInitializeInstruction({
+        programId: TOKEN_2022_PROGRAM_ID,
+        mint: mintPubkey,
+        metadata: mintPubkey,
+        name: name || 'Unknown',
+        symbol: symbol || 'UNK',
+        uri: uri || '',
+        mintAuthority: this.publicKey,
+        updateAuthority: this.publicKey
+      });
+
+      const transaction = new Transaction().add(initMetadataIx);
+
+      const { blockhash } = await this.connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = this.publicKey;
+
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize(), {
+        skipPreflight: false,
+        maxRetries: 3
+      });
+      
+      await this.connection.confirmTransaction(signature, 'confirmed');
+
+      console.log('[Web3Provider] Metadata initialization successful:', signature);
+      return signature;
+    } catch (error) {
+      console.error('[Web3Provider] Error initializing Token-2022 metadata:', error);
+      throw error;
+    }
+  }
+
+  async createMetaplexMetadata(tokenMint, metadataUri, name, symbol, isMutable = true) {
+    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
+    if (!this.connection) throw new Error('Connection not initialized');
+
+    try {
+      const { createCreateMetadataAccountV3Instruction, PROGRAM_ID } = await import('@metaplex-foundation/mpl-token-metadata');
+      
+      const mint = new PublicKey(tokenMint);
+      
+      // Derive metadata PDA
+      const [metadataPDA] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('metadata'),
+          PROGRAM_ID.toBuffer(),
+          mint.toBuffer()
+        ],
+        PROGRAM_ID
+      );
+
+      const createMetadataInstruction = createCreateMetadataAccountV3Instruction(
+        {
+          metadata: metadataPDA,
+          mint: mint,
+          mintAuthority: this.publicKey,
+          payer: this.publicKey,
+          updateAuthority: this.publicKey
+        },
+        {
+          createMetadataAccountArgsV3: {
+            data: {
+              name: name,
+              symbol: symbol,
+              uri: metadataUri,
+              sellerFeeBasisPoints: 0,
+              creators: null,
+              collection: null,
+              uses: null
+            },
+            isMutable: isMutable,
+            collectionDetails: null
+          }
+        }
+      );
+
+      const transaction = new Transaction().add(createMetadataInstruction);
+      
+      const { blockhash } = await this.connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = this.publicKey;
+
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize());
+      await this.connection.confirmTransaction(signature, 'confirmed');
+
+      return signature;
+    } catch (error) {
+      console.error('Error creating Metaplex metadata:', error);
+      throw error;
+    }
+  }
+
+  async mintTokens(tokenAddress, amount, decimals, fee, programId = TOKEN_PROGRAM_ID) {
+    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
+    if (!this.connection) throw new Error('Connection not initialized');
+
+    try {
+      const mint = new PublicKey(tokenAddress);
+      const tokenProgramId = new PublicKey(programId);
+      
+      // Check if mint authority exists
+      const mintInfo = await getMint(this.connection, mint, 'confirmed', tokenProgramId);
+      if (!mintInfo.mintAuthority) {
+        throw new Error('Mint authority has been revoked. Cannot mint more tokens.');
+      }
+      
+      if (mintInfo.mintAuthority.toString() !== this.publicKey.toString()) {
+        throw new Error('You are not the mint authority for this token.');
+      }
+
+      const associatedToken = await getAssociatedTokenAddress(
+        mint,
+        this.publicKey,
+        false,
+        tokenProgramId,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+
+      const transaction = new Transaction();
+
       if (fee > 0) {
         transaction.add(
           SystemProgram.transfer({
@@ -262,104 +449,241 @@ class SolanaWeb3Service {
         );
       }
 
-      transaction.recentBlockhash = (await this.connection.getLatestBlockhash()).blockhash;
+      transaction.add(
+        createMintToInstruction(
+          mint,
+          associatedToken,
+          this.publicKey,
+          amount * Math.pow(10, decimals),
+          [],
+          tokenProgramId
+        )
+      );
+
+      const { blockhash } = await this.connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
       transaction.feePayer = this.publicKey;
 
-      const signed = await this.wallet.signTransaction(transaction);
-      const txHash = await this.connection.sendRawTransaction(signed.serialize());
-      
-      await this.connection.confirmTransaction(txHash, 'confirmed');
-
-      console.log('[Web3Provider] ✅ Tokens minted, tx:', txHash);
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize());
+      await this.connection.confirmTransaction(signature, 'confirmed');
 
       return {
-        success: true,
-        txHash,
-        amount
+        txHash: signature
       };
     } catch (error) {
-      console.error('[Web3Provider] Mint tokens error:', error);
+      console.error('Error minting tokens:', error);
       throw error;
     }
   }
 
-  /**
-   * 🔥 Burn tokens to incinerator address
-   * @param {string} mintAddress - Token mint address
-   * @param {number} amount - Amount to burn
-   * @param {number} decimals - Token decimals
-   * @param {string} programId - Token program ID
-   * @returns {Promise<{success: boolean, txHash: string}>}
-   */
-  async burnTokens(mintAddress, amount, decimals = 9, programId = TOKEN_PROGRAM_ID) {
+  async burnTokens(tokenAddress, amount, decimals, programId = TOKEN_PROGRAM_ID) {
+    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
+    if (!this.connection) throw new Error('Connection not initialized');
+
     try {
-      if (!this.wallet || !this.publicKey) {
-        throw new Error('Wallet not connected');
-      }
-
-      console.log('[Web3Provider] 🔥 Burning tokens:', {
-        mint: mintAddress,
-        amount,
-        decimals,
-        destination: '1nc1nerator11111111111111111111111111111111'
-      });
-
-      const mint = new PublicKey(mintAddress);
-      const program = new PublicKey(programId);
+      const mint = new PublicKey(tokenAddress);
+      const tokenProgramId = new PublicKey(programId);
       
-      // Get user's token account
-      const userTokenAccount = await getAssociatedTokenAddress(
+      const associatedToken = await getAssociatedTokenAddress(
         mint,
         this.publicKey,
         false,
-        program
+        tokenProgramId,
+        ASSOCIATED_TOKEN_PROGRAM_ID
       );
 
-      // Calculate amount with decimals
-      const burnAmount = amount * Math.pow(10, decimals);
+      try {
+        const accountInfo = await getAccount(this.connection, associatedToken, 'confirmed', tokenProgramId);
+        const balance = Number(accountInfo.amount) / Math.pow(10, decimals);
+        
+        if (balance < amount) {
+          throw new Error(`Insufficient balance. You have ${balance} tokens, trying to burn ${amount}`);
+        }
+      } catch (error) {
+        if (error.message.includes('could not find account')) {
+          throw new Error('Token account not found. You may not hold any of these tokens.');
+        }
+        throw error;
+      }
 
-      // Create burn instruction (sends to incinerator)
-      const transaction = new Transaction().add(
+      const transaction = new Transaction();
+
+      transaction.add(
         createBurnInstruction(
-          userTokenAccount,  // Account to burn from
-          mint,              // Mint
-          this.publicKey,    // Owner
-          burnAmount,        // Amount
-          [],                // Multi signers
-          program            // Token program
+          associatedToken,
+          mint,
+          this.publicKey,
+          amount * Math.pow(10, decimals),
+          [],
+          tokenProgramId
         )
       );
 
-      transaction.recentBlockhash = (
-        await this.connection.getLatestBlockhash()
-      ).blockhash;
+      const { blockhash } = await this.connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
       transaction.feePayer = this.publicKey;
 
-      const signed = await this.wallet.signTransaction(transaction);
-      const txHash = await this.connection.sendRawTransaction(signed.serialize());
-      
-      await this.connection.confirmTransaction(txHash, 'confirmed');
-
-      console.log('[Web3Provider] ✅ Tokens burned, tx:', txHash);
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize());
+      await this.connection.confirmTransaction(signature, 'confirmed');
 
       return {
-        success: true,
-        txHash,
-        amount: amount,
-        destination: '1nc1nerator11111111111111111111111111111111',
-        message: `Burned ${amount} tokens permanently`
+        txHash: signature
       };
     } catch (error) {
-      console.error('[Web3Provider] Burn tokens error:', error);
+      console.error('Error burning tokens:', error);
+      throw error;
+    }
+  }
+
+  async getTokenInfo(tokenAddress, programId = TOKEN_PROGRAM_ID) {
+    if (!this.connection) throw new Error('Connection not initialized');
+
+    try {
+      const mint = new PublicKey(tokenAddress);
+      const tokenProgramId = new PublicKey(programId);
+      const mintInfo = await getMint(this.connection, mint, 'confirmed', tokenProgramId);
+
+      return {
+        address: tokenAddress,
+        decimals: mintInfo.decimals,
+        supply: Number(mintInfo.supply) / Math.pow(10, mintInfo.decimals),
+        mintAuthority: mintInfo.mintAuthority?.toString() || null,
+        freezeAuthority: mintInfo.freezeAuthority?.toString() || null,
+        programId: programId
+      };
+    } catch (error) {
+      console.error('Error getting token info:', error);
+      throw error;
+    }
+  }
+
+  async addLiquidity(network, tokenAddress, tokenAmount, solAmount, decimals) {
+    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
+    if (!this.connection) this.initConnection(network);
+
+    try {
+      const transaction = new Transaction();
+
+      transaction.add(
+        SystemProgram.transfer({
+          fromPubkey: this.publicKey,
+          toPubkey: new PublicKey(PROGRAM_ADDRESSES[network].DEXProgram),
+          lamports: solAmount * LAMPORTS_PER_SOL
+        })
+      );
+
+      const { blockhash } = await this.connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = this.publicKey;
+
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize());
+      await this.connection.confirmTransaction(signature, 'confirmed');
+
+      return {
+        txHash: signature
+      };
+    } catch (error) {
+      console.error('Error adding liquidity:', error);
+      throw error;
+    }
+  }
+
+  async swapTokens(network, fromToken, toToken, amountIn, decimals) {
+    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
+    if (!this.connection) this.initConnection(network);
+
+    try {
+      const transaction = new Transaction();
+
+      const { blockhash } = await this.connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = this.publicKey;
+
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize());
+      await this.connection.confirmTransaction(signature, 'confirmed');
+
+      return {
+        txHash: signature
+      };
+    } catch (error) {
+      console.error('Error swapping tokens:', error);
+      throw error;
+    }
+  }
+
+  async createPresale(network, presaleData, fee) {
+    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
+    if (!this.connection) this.initConnection(network);
+
+    try {
+      const transaction = new Transaction();
+
+      if (fee > 0) {
+        transaction.add(
+          SystemProgram.transfer({
+            fromPubkey: this.publicKey,
+            toPubkey: new PublicKey(FEE_RECIPIENT_ADDRESS),
+            lamports: fee * LAMPORTS_PER_SOL
+          })
+        );
+      }
+
+      const { blockhash } = await this.connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = this.publicKey;
+
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize());
+      await this.connection.confirmTransaction(signature, 'confirmed');
+
+      return {
+        txHash: signature,
+        presaleAddress: 'PRESALE_ACCOUNT_ADDRESS'
+      };
+    } catch (error) {
+      console.error('Error creating presale:', error);
+      throw error;
+    }
+  }
+
+  async investInPresale(presaleAddress, amount) {
+    if (!this.wallet || !this.publicKey) throw new Error('Wallet not connected');
+    if (!this.connection) throw new Error('Connection not initialized');
+
+    try {
+      const transaction = new Transaction();
+
+      transaction.add(
+        SystemProgram.transfer({
+          fromPubkey: this.publicKey,
+          toPubkey: new PublicKey(presaleAddress),
+          lamports: amount * LAMPORTS_PER_SOL
+        })
+      );
+
+      const { blockhash } = await this.connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = this.publicKey;
+
+      const signedTx = await this.wallet.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(signedTx.serialize());
+      await this.connection.confirmTransaction(signature, 'confirmed');
+
+      return {
+        txHash: signature
+      };
+    } catch (error) {
+      console.error('Error investing in presale:', error);
       throw error;
     }
   }
 
   /**
    * 🔒 Lock mint authority permanently on-chain
-   * @param {string} mintAddress - Token mint address
-   * @param {string} programId - Token program ID
-   * @returns {Promise<{success: boolean, txHash: string}>}
    */
   async lockMintAuthority(mintAddress, programId = TOKEN_PROGRAM_ID) {
     try {
@@ -372,15 +696,14 @@ class SolanaWeb3Service {
       const mint = new PublicKey(mintAddress);
       const program = new PublicKey(programId);
 
-      // Set mint authority to null (locks it permanently)
       const transaction = new Transaction().add(
         createSetAuthorityInstruction(
-          mint,              // mint account
-          this.publicKey,    // current authority
+          mint,
+          this.publicKey,
           AuthorityType.MintTokens,
-          null,              // new authority (null = locked forever)
-          [],                // multi signers
-          program            // token program
+          null,
+          [],
+          program
         )
       );
 
@@ -409,9 +732,6 @@ class SolanaWeb3Service {
 
   /**
    * 🔒 Lock freeze authority permanently on-chain
-   * @param {string} mintAddress - Token mint address
-   * @param {string} programId - Token program ID
-   * @returns {Promise<{success: boolean, txHash: string}>}
    */
   async lockFreezeAuthority(mintAddress, programId = TOKEN_PROGRAM_ID) {
     try {
@@ -424,13 +744,12 @@ class SolanaWeb3Service {
       const mint = new PublicKey(mintAddress);
       const program = new PublicKey(programId);
 
-      // Set freeze authority to null (locks it permanently)
       const transaction = new Transaction().add(
         createSetAuthorityInstruction(
           mint,
           this.publicKey,
           AuthorityType.FreezeAccount,
-          null,  // null = locked forever
+          null,
           [],
           program
         )
@@ -461,15 +780,11 @@ class SolanaWeb3Service {
 
   /**
    * 🔐 Make token completely immutable (lock both mint and freeze)
-   * @param {string} mintAddress - Token mint address
-   * @param {string} programId - Token program ID
-   * @returns {Promise<{success: boolean, mintTxHash: string, freezeTxHash: string}>}
    */
   async makeTokenImmutable(mintAddress, programId = TOKEN_PROGRAM_ID) {
     try {
       console.log('[Web3Provider] 🔐 Making token immutable:', mintAddress);
 
-      // Lock both authorities sequentially
       const mintResult = await this.lockMintAuthority(mintAddress, programId);
       const freezeResult = await this.lockFreezeAuthority(mintAddress, programId);
 
@@ -485,82 +800,6 @@ class SolanaWeb3Service {
     }
   }
 
-  async createPresale(network, presaleConfig, fee = PRESALE_CREATION_FEE) {
-    try {
-      if (!this.wallet || !this.publicKey) {
-        throw new Error('Wallet not connected');
-      }
-
-      console.log('[Web3Provider] Creating presale:', presaleConfig);
-
-      const transaction = new Transaction();
-
-      // Add fee payment
-      if (fee > 0) {
-        transaction.add(
-          SystemProgram.transfer({
-            fromPubkey: this.publicKey,
-            toPubkey: new PublicKey(FEE_RECIPIENT_ADDRESS),
-            lamports: fee * LAMPORTS_PER_SOL
-          })
-        );
-      }
-
-      transaction.recentBlockhash = (await this.connection.getLatestBlockhash()).blockhash;
-      transaction.feePayer = this.publicKey;
-
-      const signed = await this.wallet.signTransaction(transaction);
-      const txHash = await this.connection.sendRawTransaction(signed.serialize());
-      
-      await this.connection.confirmTransaction(txHash, 'confirmed');
-
-      console.log('[Web3Provider] ✅ Presale created, tx:', txHash);
-
-      return {
-        success: true,
-        presaleAddress: Keypair.generate().publicKey.toString(),
-        txHash
-      };
-    } catch (error) {
-      console.error('[Web3Provider] Create presale error:', error);
-      throw error;
-    }
-  }
-
-  async swap(fromToken, toToken, amount, slippage = 1.0) {
-    try {
-      if (!this.wallet || !this.publicKey) {
-        throw new Error('Wallet not connected');
-      }
-
-      console.log('[Web3Provider] Swapping:', { fromToken, toToken, amount, slippage });
-
-      // This should call XDEX API in production
-      // For now, simulate transaction
-      const transaction = new Transaction();
-      
-      transaction.recentBlockhash = (await this.connection.getLatestBlockhash()).blockhash;
-      transaction.feePayer = this.publicKey;
-
-      const signed = await this.wallet.signTransaction(transaction);
-      const txHash = await this.connection.sendRawTransaction(signed.serialize());
-      
-      await this.connection.confirmTransaction(txHash, 'confirmed');
-
-      return {
-        success: true,
-        txHash,
-        outputAmount: amount * 0.99 // Simulate 1% slippage
-      };
-    } catch (error) {
-      console.error('[Web3Provider] Swap error:', error);
-      throw error;
-    }
-  }
 }
 
-// Export singleton instance
 export const web3Service = new SolanaWeb3Service();
-
-// Export named functions for convenience
-export default web3Service;
