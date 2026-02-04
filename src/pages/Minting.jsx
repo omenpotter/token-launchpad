@@ -77,13 +77,13 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
       // LOCK MINT AUTHORITY
       if (editValues.lockMint && !token.lockMint) {
         const confirm = window.confirm(
-          '🔒 WARNING: Lock Mint Authority?\\n\\n' +
-          '⚠️ This action is PERMANENT and IRREVERSIBLE ⚠️\\n\\n' +
-          'Once locked, you will NEVER be able to:\\n' +
-          '• Mint new tokens\\n' +
-          '• Increase token supply\\n' +
-          '• Recover this authority\\n\\n' +
-          'The mint authority will be set to null on-chain.\\n\\n' +
+          '🔒 WARNING: Lock Mint Authority?\n\n' +
+          '⚠️ This action is PERMANENT and IRREVERSIBLE ⚠️\n\n' +
+          'Once locked, you will NEVER be able to:\n' +
+          '• Mint new tokens\n' +
+          '• Increase token supply\n' +
+          '• Recover this authority\n\n' +
+          'The mint authority will be set to null on-chain.\n\n' +
           'Type "LOCK" to confirm you understand this is permanent:'
         );
         
@@ -103,7 +103,7 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
             ? 'TokenzQdBNbNbGKPFXCWuBvf9Ss623VQ5DA'
             : 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
 
-          alert('🔒 Locking mint authority on-chain...\\n\\nPlease approve the transaction in your wallet.');
+          alert('🔒 Locking mint authority on-chain...\n\nPlease approve the transaction in your wallet.');
           
           const result = await web3Service.lockMintAuthority(token.mint, programId);
           
@@ -112,11 +112,11 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
           updates.lockMintDate = new Date().toISOString();
           
           alert(
-            \`✅ Mint Authority Locked Permanently!\\n\\n\` +
-            \`Transaction: \${result.txHash}\\n\\n\` +
-            \`View on Explorer:\\n\` +
-            \`https://explorer.x1.xyz/tx/\${result.txHash}\\n\\n\` +
-            \`⚠️ No more tokens can ever be minted for \${token.symbol}\`
+            `✅ Mint Authority Locked Permanently!\n\n` +
+            `Transaction: ${result.txHash}\n\n` +
+            `View on Explorer:\n` +
+            `https://explorer.x1.xyz/tx/${result.txHash}\n\n` +
+            `⚠️ No more tokens can ever be minted for ${token.symbol}`
           );
         } catch (error) {
           console.error('[Dashboard] Lock mint error:', error);
@@ -128,16 +128,16 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
       // MAKE TOKEN IMMUTABLE
       if (editValues.immutable && !token.immutable) {
         const confirm1 = window.confirm(
-          '🔐 WARNING: Make Token Immutable?\\n\\n' +
-          '⚠️ THIS IS THE MOST EXTREME ACTION ⚠️\\n\\n' +
-          'This will PERMANENTLY lock BOTH:\\n' +
-          '1. Mint Authority (can never mint more)\\n' +
-          '2. Freeze Authority (can never freeze accounts)\\n\\n' +
-          'Once immutable, you will NEVER be able to:\\n' +
-          '• Mint new tokens\\n' +
-          '• Freeze any accounts\\n' +
-          '• Change any token properties\\n' +
-          '• Recover any authorities\\n\\n' +
+          '🔐 WARNING: Make Token Immutable?\n\n' +
+          '⚠️ THIS IS THE MOST EXTREME ACTION ⚠️\n\n' +
+          'This will PERMANENTLY lock BOTH:\n' +
+          '1. Mint Authority (can never mint more)\n' +
+          '2. Freeze Authority (can never freeze accounts)\n\n' +
+          'Once immutable, you will NEVER be able to:\n' +
+          '• Mint new tokens\n' +
+          '• Freeze any accounts\n' +
+          '• Change any token properties\n' +
+          '• Recover any authorities\n\n' +
           'Click OK to continue to final confirmation...'
         );
         
@@ -147,10 +147,10 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
         }
 
         const userInput = prompt(
-          '⚠️ FINAL WARNING ⚠️\\n\\n' +
-          'Type the token symbol to confirm:\\n' +
-          \`Token: \${token.name} (\${token.symbol})\\n\\n\` +
-          \`Type "\${token.symbol}" exactly to proceed:\`
+          '⚠️ FINAL WARNING ⚠️\n\n' +
+          'Type the token symbol to confirm:\n' +
+          `Token: ${token.name} (${token.symbol})\n\n` +
+          `Type "${token.symbol}" exactly to proceed:`
         );
         
         if (userInput !== token.symbol) {
@@ -168,10 +168,10 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
             : 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
 
           alert(
-            '🔐 Making token immutable...\\n\\n' +
-            'You will need to approve 2 transactions:\\n' +
-            '1. Lock Mint Authority\\n' +
-            '2. Lock Freeze Authority\\n\\n' +
+            '🔐 Making token immutable...\n\n' +
+            'You will need to approve 2 transactions:\n' +
+            '1. Lock Mint Authority\n' +
+            '2. Lock Freeze Authority\n\n' +
             'Please approve both in your wallet.'
           );
           
@@ -184,13 +184,13 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
           updates.immutableDate = new Date().toISOString();
           
           alert(
-            \`✅ \${token.symbol} is now COMPLETELY IMMUTABLE!\\n\\n\` +
-            \`Mint Lock Transaction:\\n\${result.mintTxHash}\\n\\n\` +
-            \`Freeze Lock Transaction:\\n\${result.freezeTxHash}\\n\\n\` +
-            \`View on Explorer:\\n\` +
-            \`https://explorer.x1.xyz/tx/\${result.mintTxHash}\\n\\n\` +
-            \`⚠️ All authorities are permanently locked.\\n\` +
-            \`This token can never be changed again.\`
+            `✅ ${token.symbol} is now COMPLETELY IMMUTABLE!\n\n` +
+            `Mint Lock Transaction:\n${result.mintTxHash}\n\n` +
+            `Freeze Lock Transaction:\n${result.freezeTxHash}\n\n` +
+            `View on Explorer:\n` +
+            `https://explorer.x1.xyz/tx/${result.mintTxHash}\n\n` +
+            `⚠️ All authorities are permanently locked.\n` +
+            `This token can never be changed again.`
           );
         } catch (error) {
           console.error('[Dashboard] Make immutable error:', error);
@@ -235,7 +235,7 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
         await refetchTokens();
       }
       
-      alert(\`✅ \${token.symbol} sent to Minting Page!\`);
+      alert(`✅ ${token.symbol} sent to Minting Page!`);
     } catch (error) {
       alert('Failed to send token: ' + error.message);
     }
@@ -318,7 +318,7 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <span className="text-xs text-slate-400">Mint:</span>
                   <a 
-                    href={\`https://explorer.mainnet.x1.xyz/address/\${token.mint}\`}
+                    href={`https://explorer.mainnet.x1.xyz/address/${token.mint}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm text-blue-400 font-mono hover:text-blue-300 transition flex items-center gap-1 truncate"
@@ -329,7 +329,7 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
                 </div>
                 <div className="flex items-center gap-2">
                   <a
-                    href={\`https://x1.ninja/token/\${token.mint}\`}
+                    href={`https://x1.ninja/token/${token.mint}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-2 py-1 text-xs bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 rounded transition"
@@ -358,7 +358,7 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
                       return;
                     }
 
-                    const mintAmount = prompt(\`Enter amount of \${token.symbol} to mint:\`);
+                    const mintAmount = prompt(`Enter amount of ${token.symbol} to mint:`);
                     if (!mintAmount || isNaN(mintAmount) || parseFloat(mintAmount) <= 0) {
                       alert('Invalid mint amount');
                       return;
@@ -371,7 +371,7 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
 
                       const mintAddress = token.mint.trim();
                       if (mintAddress.length < 32 || mintAddress.length > 44) {
-                        throw new Error(\`Invalid mint address length: \${mintAddress.length} (expected 32-44)\`);
+                        throw new Error(`Invalid mint address length: ${mintAddress.length} (expected 32-44)`);
                       }
 
                       if (!web3Service.connection) {
@@ -399,7 +399,7 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
                         await refetchTokens();
                       }
 
-                      alert(\`✅ Minted \${mintAmount} \${token.symbol} successfully!\\n\\nTransaction: \${result.txHash}\\n\\nView on Explorer:\\nhttps://explorer.x1.xyz/tx/\${result.txHash}\`);
+                      alert(`✅ Minted ${mintAmount} ${token.symbol} successfully!\n\nTransaction: ${result.txHash}\n\nView on Explorer:\nhttps://explorer.x1.xyz/tx/${result.txHash}`);
                     } catch (error) {
                       console.error('[Dashboard] Mint error:', error);
                       alert('Failed to mint tokens: ' + error.message);
@@ -418,18 +418,18 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
                       return;
                     }
 
-                    const burnAmount = prompt(\`Enter amount of \${token.symbol} to burn:\`);
+                    const burnAmount = prompt(`Enter amount of ${token.symbol} to burn:`);
                     if (!burnAmount || isNaN(burnAmount) || parseFloat(burnAmount) <= 0) {
                       alert('Invalid burn amount');
                       return;
                     }
 
                     const confirmBurn = window.confirm(
-                      \`⚠️ WARNING: Burn \${burnAmount} \${token.symbol}?\\n\\n\` +
-                      \`This action is PERMANENT and IRREVERSIBLE.\\n\` +
-                      \`Burned tokens will be sent to:\\n\` +
-                      \`1nc1nerator11111111111111111111111111111111\\n\\n\` +
-                      \`Are you absolutely sure?\`
+                      `⚠️ WARNING: Burn ${burnAmount} ${token.symbol}?\n\n` +
+                      `This action is PERMANENT and IRREVERSIBLE.\n` +
+                      `Burned tokens will be sent to:\n` +
+                      `1nc1nerator11111111111111111111111111111111\n\n` +
+                      `Are you absolutely sure?`
                     );
 
                     if (!confirmBurn) {
@@ -443,7 +443,7 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
 
                       const mintAddress = token.mint.trim();
                       if (mintAddress.length < 32 || mintAddress.length > 44) {
-                        throw new Error(\`Invalid mint address length: \${mintAddress.length} (expected 32-44)\`);
+                        throw new Error(`Invalid mint address length: ${mintAddress.length} (expected 32-44)`);
                       }
 
                       if (!web3Service.connection) {
@@ -470,7 +470,7 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
                         await refetchTokens();
                       }
 
-                      alert(\`✅ Burned \${burnAmount} \${token.symbol} successfully!\\n\\nTokens sent to incinerator:\\n1nc1nerator11111111111111111111111111111111\\n\\nTransaction: \${result.txHash}\\n\\nView on Explorer:\\nhttps://explorer.x1.xyz/tx/\${result.txHash}\`);
+                      alert(`✅ Burned ${burnAmount} ${token.symbol} successfully!\n\nTokens sent to incinerator:\n1nc1nerator11111111111111111111111111111111\n\nTransaction: ${result.txHash}\n\nView on Explorer:\nhttps://explorer.x1.xyz/tx/${result.txHash}`);
                     } catch (error) {
                       console.error('[Dashboard] Burn error:', error);
                       alert('Failed to burn tokens: ' + error.message);
@@ -601,7 +601,7 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
                             <div className="w-9 h-5 bg-slate-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
                           </label>
                         ) : (
-                          <span className={\`text-sm font-medium \${token.lockMint ? 'text-amber-400' : 'text-slate-500'}\`}>
+                          <span className={`text-sm font-medium ${token.lockMint ? 'text-amber-400' : 'text-slate-500'}`}>
                             {token.lockMint ? 'Locked' : 'Unlocked'}
                           </span>
                         )}
@@ -626,7 +626,7 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
                             <div className="w-9 h-5 bg-slate-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
                           </label>
                         ) : (
-                          <span className={\`text-sm font-medium \${token.immutable ? 'text-purple-400' : 'text-slate-500'}\`}>
+                          <span className={`text-sm font-medium ${token.immutable ? 'text-purple-400' : 'text-slate-500'}`}>
                             {token.immutable ? 'Yes' : 'No'}
                           </span>
                         )}
@@ -651,7 +651,7 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
                             <div className="w-9 h-5 bg-slate-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div>
                           </label>
                         ) : (
-                          <span className={\`text-sm font-medium \${token.fairMint ? 'text-blue-400' : 'text-slate-500'}\`}>
+                          <span className={`text-sm font-medium ${token.fairMint ? 'text-blue-400' : 'text-slate-500'}`}>
                             {token.fairMint ? 'Enabled' : 'Disabled'}
                           </span>
                         )}
@@ -691,7 +691,7 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
                             <div className="w-9 h-5 bg-slate-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div>
                           </label>
                         ) : (
-                          <span className={\`text-sm font-medium \${token.lockEnabled ? 'text-green-400' : 'text-slate-500'}\`}>
+                          <span className={`text-sm font-medium ${token.lockEnabled ? 'text-green-400' : 'text-slate-500'}`}>
                             {token.lockEnabled ? 'Yes' : 'No'}
                           </span>
                         )}
