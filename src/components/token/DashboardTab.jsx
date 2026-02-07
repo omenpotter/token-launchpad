@@ -393,7 +393,12 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
                         await refetchTokens();
                       }
 
-                      alert(`✅ Minted ${mintAmount} ${token.symbol} successfully!\n\nTransaction: ${result.txHash}\n\nView on Explorer:\nhttps://explorer.x1.xyz/tx/${result.txHash}`);
+                      alert(`✅ Minted ${mintAmount} ${token.symbol} successfully!
+
+Transaction: ${result.txHash}
+
+View on Explorer:
+https://explorer.x1.xyz/tx/${result.txHash}`);
                     } catch (error) {
                       console.error('[Dashboard] Mint error:', error);
                       alert('Failed to mint tokens: ' + error.message);
@@ -418,10 +423,16 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
                     }
 
                     const confirmBurn = window.confirm(
-                      `⚠️ WARNING: Burn ${burnAmount} ${token.symbol}?\n\n` +
-                      `This action is PERMANENT and IRREVERSIBLE.\n` +
-                      `Burned tokens will be sent to:\n` +
-                      `1nc1nerator11111111111111111111111111111111\n\n` +
+                      `⚠️ WARNING: Burn ${burnAmount} ${token.symbol}?
+
+` +
+                      `This action is PERMANENT and IRREVERSIBLE.
+` +
+                      `Burned tokens will be sent to:
+` +
+                      `1nc1nerator11111111111111111111111111111111
+
+` +
                       `Are you absolutely sure?`
                     );
 
@@ -463,63 +474,17 @@ export default function DashboardTab({ createdTokens, refetchTokens, network, on
                         await refetchTokens();
                       }
 
-                      alert(`✅ Burned ${burnAmount} ${token.symbol} successfully!\n\nTokens sent to incinerator:\n1nc1nerator11111111111111111111111111111111\n\nTransaction: ${result.txHash}\n\nView on Explorer:\nhttps://explorer.x1.xyz/tx/${result.txHash}`);
+                      alert(`✅ Burned ${burnAmount} ${token.symbol} successfully!
+
+Tokens sent to incinerator:
+1nc1nerator11111111111111111111111111111111
+
+Transaction: ${result.txHash}
+
+View on Explorer:
+https://explorer.x1.xyz/tx/${result.txHash}`);
                     } catch (error) {
                       console.error('[Dashboard] Burn error:', error);
-                      alert('Failed to burn tokens: ' + error.message);
-                    }
-                  }}
-                  className="flex items-center justify-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition text-sm font-medium"
-                >
-                  <Flame className="w-4 h-4" />
-                  Burn
-                </button>
-                <button</button>
-                <button
-                  onClick={async () => {
-                    if (!walletConnected) {
-                      alert('Please connect your wallet first');
-                      return;
-                    }
-
-                    const burnAmount = prompt(`Enter amount of ${token.symbol} to burn:`);
-                    if (!burnAmount || isNaN(burnAmount) || parseFloat(burnAmount) <= 0) {
-                      alert('Invalid burn amount');
-                      return;
-                    }
-
-                    try {
-                      if (!web3Service.connection) {
-                        web3Service.initConnection(network);
-                      }
-
-                      // Validate mint address
-                      if (!token.mint || typeof token.mint !== 'string') {
-                        throw new Error('Invalid token mint address');
-                      }
-
-                      const programId = token.type === 'TOKEN2022' 
-                        ? 'TokenzQdBNbNbGKPFXCWuBvf9Ss623VQ5DA' 
-                        : 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
-                      
-                      const result = await web3Service.burnTokens(
-                        token.mint.trim(), 
-                        parseFloat(burnAmount), 
-                        token.decimals, 
-                        programId
-                      );
-
-                      await base44.entities.Token.update(token.id, {
-                        burned: (token.burned || 0) + parseFloat(burnAmount),
-                        supply: Math.max(0, token.supply - parseFloat(burnAmount))
-                      });
-
-                      if (typeof refetchTokens === 'function') {
-                        await refetchTokens();
-                      }
-
-                      alert(`✅ Burned ${burnAmount} ${token.symbol} successfully!\nTx: ${result.txHash}`);
-                    } catch (error) {
                       alert('Failed to burn tokens: ' + error.message);
                     }
                   }}
